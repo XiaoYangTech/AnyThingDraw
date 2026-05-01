@@ -5756,6 +5756,8 @@ void SettingMain()
 										{
 											pptComSetlist.showBottomBoth = ShowBottomBoth;
 											PptComWriteSetting();
+
+											PptUiChangeSignal = true;
 										}
 									}
 
@@ -5796,6 +5798,8 @@ void SettingMain()
 										{
 											pptComSetlist.showMiddleBoth = ShowMiddleBoth;
 											PptComWriteSetting();
+
+											PptUiChangeSignal = true;
 										}
 									}
 
@@ -5836,6 +5840,8 @@ void SettingMain()
 										{
 											pptComSetlist.showBottomMiddle = ShowBottomMiddle;
 											PptComWriteSetting();
+
+											PptUiChangeSignal = true;
 										}
 									}
 
