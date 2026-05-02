@@ -1,14 +1,14 @@
-﻿﻿/*
- * @file		PptCOM.cs
- * @brief		智绘教项目 PPT 联动插件
- * @note		PPT 联动插件 相关模块
- *
- * @envir		.NET Framework 4.0
- * @site		https://github.com/Alan-CRL/Inkeys
- *
- * @author		Alan-CRL
- * @qq			2685549821
- * @email		alan-crl@foxmail.com
+﻿/*
+* @file		PptCOM.cs
+* @brief		智绘教项目 PPT 联动插件
+* @note		PPT 联动插件 相关模块
+*
+* @envir		.NET Framework 4.0
+* @site		https://github.com/Alan-CRL/Inkeys
+*
+* @author		Alan-CRL
+* @qq			2685549821
+* @email		alan-crl@foxmail.com
 */
 
 // 首次编译需要确认 .NET Framework 版本为 4.0，如果不一致请执行 <切换 .NET Framework 指南>
@@ -111,7 +111,7 @@ namespace PptCOM
         }
         public string CheckCOM()
         {
-            string ret = "20260201a";
+            string ret = "20260501a";
             return ret;
         }
 
@@ -909,45 +909,45 @@ namespace PptCOM
                                     }
 
                                     if (!busyRetry) try
-                                    {
-                                        // 关键修改：这里不要直接用 pptApplication +=，而是先强转
-                                        Microsoft.Office.Interop.PowerPoint.Application app = pptApplication as Microsoft.Office.Interop.PowerPoint.Application;
-
-                                        if (app != null)
                                         {
-                                            app.SlideShowNextSlide += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowNextSlideEventHandler(SlideShowChange);
-                                            app.SlideShowBegin += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowBeginEventHandler(SlideShowBegin);
-                                            app.SlideShowEnd += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowEndEventHandler(SlideShowShowEnd);
+                                            // 关键修改：这里不要直接用 pptApplication +=，而是先强转
+                                            Microsoft.Office.Interop.PowerPoint.Application app = pptApplication as Microsoft.Office.Interop.PowerPoint.Application;
 
-                                            try
+                                            if (app != null)
                                             {
-                                                app.PresentationBeforeClose += new Microsoft.Office.Interop.PowerPoint.EApplication_PresentationBeforeCloseEventHandler(PresentationBeforeClose);
+                                                app.SlideShowNextSlide += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowNextSlideEventHandler(SlideShowChange);
+                                                app.SlideShowBegin += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowBeginEventHandler(SlideShowBegin);
+                                                app.SlideShowEnd += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowEndEventHandler(SlideShowShowEnd);
+
+                                                try
+                                                {
+                                                    app.PresentationBeforeClose += new Microsoft.Office.Interop.PowerPoint.EApplication_PresentationBeforeCloseEventHandler(PresentationBeforeClose);
+                                                }
+                                                catch
+                                                {
+                                                    Console.WriteLine($"无法注册事件 2!");
+                                                }
+
+                                                bindingEvents = true;
+                                                forcePolling = false;
+
+                                                Console.WriteLine($"事件注册成功!");
                                             }
-                                            catch
+                                            else
                                             {
-                                                Console.WriteLine($"无法注册事件 2!");
+                                                bindingEvents = false;
+                                                forcePolling = true;
+
+                                                Console.WriteLine($"转换 Application 接口失败，无法注册事件");
                                             }
-
-                                            bindingEvents = true;
-                                            forcePolling = false;
-
-                                            Console.WriteLine($"事件注册成功!");
                                         }
-                                        else
+                                        catch (Exception ex)
                                         {
                                             bindingEvents = false;
                                             forcePolling = true;
 
-                                            Console.WriteLine($"转换 Application 接口失败，无法注册事件");
+                                            Console.WriteLine($"无法注册事件 1! {ex.Message}");
                                         }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        bindingEvents = false;
-                                        forcePolling = true;
-
-                                        Console.WriteLine($"无法注册事件 1! {ex.Message}");
-                                    }
 
                                     if (!busyRetry) Console.WriteLine($"成功绑定! {pptApplication.Name}");
                                 }
