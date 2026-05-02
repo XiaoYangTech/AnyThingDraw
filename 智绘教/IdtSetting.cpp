@@ -784,7 +784,7 @@ void SettingMain()
 		}ConfigurationSetting;
 
 		bool EnableFixWithChangeArchitecture = true;
-		bool EnableAutoUpdate = GetEnableAutoUpdate();
+		bool EnableAutoUpdate = false;
 
 		int SelectLanguage = setlist.selectLanguage;
 		bool StartUp = setlist.startUp;
@@ -948,6 +948,7 @@ void SettingMain()
 			ImGui_ImplDX9_NewFrame();
 			ImGui_ImplWin32_NewFrame();
 			ImGui::NewFrame();
+			EnableAutoUpdate = GetEnableAutoUpdate();
 
 			{
 				//定义栏操作
@@ -2693,6 +2694,7 @@ void SettingMain()
 								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, IM_COL32(0, 0, 0, 15));
 								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 95, 184, 255));
 								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(0, 95, 184, 230));
+								const bool enableAutoUpdateSnapshot = EnableAutoUpdate;
 								if (!EnableAutoUpdate)
 								{
 									PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 155));
@@ -2703,20 +2705,28 @@ void SettingMain()
 									PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 255, 255));
 									PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_BorderShadow, IM_COL32(0, 95, 184, 255));
 								}
-								ImGui::Toggle("##自动更新（静默）", &EnableAutoUpdate, config);
+								const bool enableAutoUpdateChanged = ImGui::Toggle("##自动更新（静默）", &EnableAutoUpdate, config);
 
-								if (GetEnableAutoUpdate() != EnableAutoUpdate)
+								if (enableAutoUpdateChanged && enableAutoUpdateSnapshot != EnableAutoUpdate)
 								{
-									SetEnableAutoUpdate(EnableAutoUpdate);
-									WriteSetting();
-
 									if (!EnableAutoUpdate && AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateRestart)
 									{
-										if (ClearUpdateRestartInstaller() != ClearInstallerResult::Failed) AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+										if (ClearUpdateRestartInstaller() != ClearInstallerResult::Failed)
+										{
+											SetEnableAutoUpdate(EnableAutoUpdate);
+											WriteSetting();
+											AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+										}
+										else EnableAutoUpdate = enableAutoUpdateSnapshot;
 									}
-									else if (EnableAutoUpdate && AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateNew)
+									else
 									{
-										AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+										SetEnableAutoUpdate(EnableAutoUpdate);
+										WriteSetting();
+										if (EnableAutoUpdate && AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateNew)
+										{
+											AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+										}
 									}
 								}
 							}
@@ -2838,15 +2848,21 @@ void SettingMain()
 												if (UpdateChannelMode == 1) selectedUpdateChannel = "Insider";
 												else if (UpdateChannelMode == 2) selectedUpdateChannel = "Canary";
 												else selectedUpdateChannel = "LTS";
-												SetUpdateChannel(selectedUpdateChannel);
-
-												WriteSetting();
-
 												if (AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateRestart)
 												{
-													if (ClearUpdateRestartInstaller() != ClearInstallerResult::Failed) AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+													if (ClearUpdateRestartInstaller() != ClearInstallerResult::Failed)
+													{
+														SetUpdateChannel(selectedUpdateChannel);
+														WriteSetting();
+														AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+													}
 												}
-												else AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+												else
+												{
+													SetUpdateChannel(selectedUpdateChannel);
+													WriteSetting();
+													AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+												}
 											}
 										}
 										if (is_selected) ImGui::SetItemDefaultFocus();
@@ -2931,19 +2947,28 @@ void SettingMain()
 											UpdateArchitecture = i;
 											if (UpdateArchitectureEcho != UpdateArchitecture)
 											{
-												if (UpdateArchitecture == 0) SetUpdateArchitecture("win64");
-												else if (UpdateArchitecture == 2) SetUpdateArchitecture("arm64");
-												else SetUpdateArchitecture("win32");
-
-												WriteSetting();
+												string selectedUpdateArchitecture;
+												if (UpdateArchitecture == 0) selectedUpdateArchitecture = "win64";
+												else if (UpdateArchitecture == 2) selectedUpdateArchitecture = "arm64";
+												else selectedUpdateArchitecture = "win32";
 
 												if (AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateRestart)
 												{
-													if (ClearUpdateRestartInstaller() != ClearInstallerResult::Failed) AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+													if (ClearUpdateRestartInstaller() != ClearInstallerResult::Failed)
+													{
+														SetUpdateArchitecture(selectedUpdateArchitecture);
+														WriteSetting();
+														AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+													}
 												}
-												else if (AutomaticUpdateState != AutomaticUpdateStateEnum::UpdateNotStarted)
+												else
 												{
-													AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+													SetUpdateArchitecture(selectedUpdateArchitecture);
+													WriteSetting();
+													if (AutomaticUpdateState != AutomaticUpdateStateEnum::UpdateNotStarted)
+													{
+														AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+													}
 												}
 											}
 										}
