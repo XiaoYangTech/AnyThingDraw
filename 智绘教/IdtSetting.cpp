@@ -180,26 +180,58 @@ void SettingMain()
 			unique_lock<shared_mutex> lock(setlistUpdateMutex);
 			setlist.updateArchitecture = architecture;
 		};
-	auto ClearUpdateRestartInstaller = []()
+	auto GetEnableAutoUpdate = []()
 		{
+			shared_lock<shared_mutex> lock(setlistUpdateMutex);
+			return setlist.enableAutoUpdate;
+		};
+	auto SetEnableAutoUpdate = [](bool enable)
+		{
+			unique_lock<shared_mutex> lock(setlistUpdateMutex);
+			setlist.enableAutoUpdate = enable;
+		};
+	enum class ClearInstallerResult
+	{
+		Missing,
+		Cleared,
+		Failed
+	};
+	auto ClearUpdateRestartInstaller = []() -> ClearInstallerResult
+		{
+			const auto installerDir = globalPath + L"installer";
 			error_code ec;
-			if (_waccess((globalPath + L"installer").c_str(), 4) != 0) return true;
+			const bool exists = filesystem::exists(installerDir, ec);
+			if (ec)
+			{
+				if (IDTLogger) IDTLogger->error("[SettingMain] 检查更新安装目录失败: {}", ec.message());
+				return ClearInstallerResult::Failed;
+			}
+			if (!exists)
+			{
+				filesystem::create_directory(installerDir, ec);
+				if (ec)
+				{
+					if (IDTLogger) IDTLogger->error("[SettingMain] 创建更新安装目录失败: {}", ec.message());
+					return ClearInstallerResult::Failed;
+				}
+				return ClearInstallerResult::Missing;
+			}
 
-			filesystem::remove_all(globalPath + L"installer", ec);
+			filesystem::remove_all(installerDir, ec);
 			if (ec)
 			{
 				if (IDTLogger) IDTLogger->error("[SettingMain] 删除更新安装目录失败: {}", ec.message());
-				return false;
+				return ClearInstallerResult::Failed;
 			}
 
-			filesystem::create_directory(globalPath + L"installer", ec);
+			filesystem::create_directory(installerDir, ec);
 			if (ec)
 			{
 				if (IDTLogger) IDTLogger->error("[SettingMain] 重建更新安装目录失败: {}", ec.message());
-				return false;
+				return ClearInstallerResult::Failed;
 			}
 
-			return true;
+			return ClearInstallerResult::Cleared;
 		};
 
 	bool showWindow = false;
@@ -752,7 +784,7 @@ void SettingMain()
 		}ConfigurationSetting;
 
 		bool EnableFixWithChangeArchitecture = true;
-		bool EnableAutoUpdate = setlist.enableAutoUpdate;
+		bool EnableAutoUpdate = GetEnableAutoUpdate();
 
 		int SelectLanguage = setlist.selectLanguage;
 		bool StartUp = setlist.startUp;
@@ -2673,17 +2705,16 @@ void SettingMain()
 								}
 								ImGui::Toggle("##自动更新（静默）", &EnableAutoUpdate, config);
 
-								if (setlist.enableAutoUpdate != EnableAutoUpdate)
+								if (GetEnableAutoUpdate() != EnableAutoUpdate)
 								{
-									setlist.enableAutoUpdate = EnableAutoUpdate;
+									SetEnableAutoUpdate(EnableAutoUpdate);
 									WriteSetting();
 
-									if (!setlist.enableAutoUpdate && AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateRestart)
+									if (!EnableAutoUpdate && AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateRestart)
 									{
-										if (ClearUpdateRestartInstaller()) AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
-										else AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateNotStarted;
+										if (ClearUpdateRestartInstaller() != ClearInstallerResult::Failed) AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
 									}
-									else if (setlist.enableAutoUpdate && AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateNew)
+									else if (EnableAutoUpdate && AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateNew)
 									{
 										AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
 									}
@@ -2813,8 +2844,7 @@ void SettingMain()
 
 												if (AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateRestart)
 												{
-													if (ClearUpdateRestartInstaller()) AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
-													else AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateNotStarted;
+													if (ClearUpdateRestartInstaller() != ClearInstallerResult::Failed) AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
 												}
 												else AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
 											}
@@ -2909,8 +2939,7 @@ void SettingMain()
 
 												if (AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateRestart)
 												{
-													if (ClearUpdateRestartInstaller()) AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
-													else AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateNotStarted;
+													if (ClearUpdateRestartInstaller() != ClearInstallerResult::Failed) AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
 												}
 												else if (AutomaticUpdateState != AutomaticUpdateStateEnum::UpdateNotStarted)
 												{

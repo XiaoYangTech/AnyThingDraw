@@ -19,12 +19,13 @@ namespace
 	{
 		string channel;
 		string architecture;
+		bool enableAutoUpdate;
 	};
 
 	UpdateTargetSnapshot GetUpdateTargetSnapshot()
 	{
 		shared_lock<shared_mutex> lock(setlistUpdateMutex);
-		return { setlist.UpdateChannel, setlist.updateArchitecture };
+		return { setlist.UpdateChannel, setlist.updateArchitecture, setlist.enableAutoUpdate };
 	}
 
 	void SetUpdateChannelSnapshot(const string& channel)
@@ -57,7 +58,7 @@ string GetRefererInfo()
 	ret += utf16ToUtf8(editionDate) + ",";
 	ret += utf16ToUtf8(programArchitecture) + ",";
 	ret += updateTarget.channel + ",";
-	ret += setlist.enableAutoUpdate ? "true," : "false,";
+	ret += updateTarget.enableAutoUpdate ? "true," : "false,";
 	ret += utf16ToUtf8(windowsEdition);
 	return ret;
 }
@@ -275,7 +276,7 @@ AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state,
 		//创建 update.json 文件，指示更新
 		if (editionInfo.hash_md5 == hash_md5 && editionInfo.hash_sha256 == hash_sha256)
 		{
-			if (!setlist.enableAutoUpdate && !mandatoryUpdate)
+			if (!GetUpdateTargetSnapshot().enableAutoUpdate && !mandatoryUpdate)
 			{
 				error_code ec;
 				filesystem::remove(globalPath + L"installer\\new_procedure_" + timestamp + L".exe", ec);
@@ -370,7 +371,7 @@ updateStart:
 		}
 
 		//下载最新版本
-		if (state && editionInfo.editionDate != L"" && ((editionInfo.editionDate > editionDate && setlist.enableAutoUpdate) || mandatoryUpdate))
+		if (state && editionInfo.editionDate != L"" && ((editionInfo.editionDate > editionDate && GetUpdateTargetSnapshot().enableAutoUpdate) || mandatoryUpdate))
 		{
 			// 无法使用自动更新以及自动修复的情况
 			if (editionInfo.isInkeys3 && !mandatoryUpdate)
@@ -443,7 +444,7 @@ updateStart:
 
 						if (tedition == editionInfo.editionDate && _waccess((globalPath + tpath).c_str(), 0) == 0 && hash_md5 == thash_md5 && hash_sha256 == thash_sha256 && editionInfo.channel == tchannel && updateArch == tarch)
 						{
-							if (!setlist.enableAutoUpdate)
+							if (!GetUpdateTargetSnapshot().enableAutoUpdate)
 							{
 								if (_waccess((globalPath + L"installer").c_str(), 0) == 0)
 								{

@@ -870,6 +870,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			}
 			// 软件版本
 			{
+				unique_lock<shared_mutex> lock(setlistUpdateMutex);
 				setlist.enableAutoUpdate = true;
 				setlist.UpdateChannel = "LTS";
 				{
