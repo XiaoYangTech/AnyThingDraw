@@ -154,6 +154,7 @@ struct SetListStruct
 #pragma endregion
 };
 extern SetListStruct setlist;
+extern shared_mutex setlistUpdateMutex;
 bool ReadSetting();
 bool ReadSettingMini();
 bool WriteSetting();

@@ -70,6 +70,7 @@ bool UnOccupyFile(HANDLE* hFile)
 }
 
 SetListStruct setlist;
+shared_mutex setlistUpdateMutex;
 Json::Value setlistVal;
 bool ReadSetting()
 {
@@ -208,13 +209,16 @@ bool ReadSetting()
 		{
 			if (setlistVal["UpdateSetting"].isMember("EnableAutoUpdate") && setlistVal["UpdateSetting"]["EnableAutoUpdate"].isBool())
 				setlist.enableAutoUpdate = setlistVal["UpdateSetting"]["EnableAutoUpdate"].asBool();
-			if (setlistVal["UpdateSetting"].isMember("UpdateChannel") && setlistVal["UpdateSetting"]["UpdateChannel"].isString())
-				setlist.UpdateChannel = setlistVal["UpdateSetting"]["UpdateChannel"].asString();
-			if (setlistVal["UpdateSetting"].isMember("UpdateArchitecture") && setlistVal["UpdateSetting"]["UpdateArchitecture"].isString())
 			{
-				setlist.updateArchitecture = setlistVal["UpdateSetting"]["UpdateArchitecture"].asString();
-				if (setlist.updateArchitecture != "win32" && setlist.updateArchitecture != "win64" && setlist.updateArchitecture != "arm64")
-					setlist.updateArchitecture = "win32";
+				unique_lock<shared_mutex> lock(setlistUpdateMutex);
+				if (setlistVal["UpdateSetting"].isMember("UpdateChannel") && setlistVal["UpdateSetting"]["UpdateChannel"].isString())
+					setlist.UpdateChannel = setlistVal["UpdateSetting"]["UpdateChannel"].asString();
+				if (setlistVal["UpdateSetting"].isMember("UpdateArchitecture") && setlistVal["UpdateSetting"]["UpdateArchitecture"].isString())
+				{
+					setlist.updateArchitecture = setlistVal["UpdateSetting"]["UpdateArchitecture"].asString();
+					if (setlist.updateArchitecture != "win32" && setlist.updateArchitecture != "win64" && setlist.updateArchitecture != "arm64")
+						setlist.updateArchitecture = "win32";
+				}
 			}
 		}
 
@@ -404,6 +408,13 @@ bool ReadSettingMini()
 bool WriteSetting()
 {
 	if (setlist.configurationSetting.enable) setlistVal.clear();
+	string updateChannel;
+	string updateArchitecture;
+	{
+		shared_lock<shared_mutex> lock(setlistUpdateMutex);
+		updateChannel = setlist.UpdateChannel;
+		updateArchitecture = setlist.updateArchitecture;
+	}
 	{
 		{
 			setlistVal["ConfigurationSetting"]["Enable"] = Json::Value(setlist.configurationSetting.enable);
@@ -459,8 +470,8 @@ bool WriteSetting()
 
 		{
 			setlistVal["UpdateSetting"]["EnableAutoUpdate"] = Json::Value(setlist.enableAutoUpdate);
-			setlistVal["UpdateSetting"]["UpdateChannel"] = Json::Value(setlist.UpdateChannel);
-			setlistVal["UpdateSetting"]["UpdateArchitecture"] = Json::Value(setlist.updateArchitecture);
+			setlistVal["UpdateSetting"]["UpdateChannel"] = Json::Value(updateChannel);
+			setlistVal["UpdateSetting"]["UpdateArchitecture"] = Json::Value(updateArchitecture);
 		}
 		{
 			setlistVal["BasicInfo"]["UserID"] = Json::Value(utf16ToUtf8(userId));
