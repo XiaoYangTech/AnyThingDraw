@@ -1,4 +1,4 @@
-﻿/*
+/*
  * @file		IdtMain.cpp
  * @brief		智绘教项目中心源文件
  * @note		用于初始化智绘教并调用相关模块
@@ -48,7 +48,7 @@ import Inkeys.Thread.Status;
 #pragma comment(lib, "netapi32.lib")
 
 wstring buildTime = __DATE__ L" " __TIME__;		// 构建时间
-wstring editionDate = L"20260418a";				// 程序发布日期
+wstring editionDate = L"20260502a";				// 程序发布日期
 wstring editionChannel = L"LTS";				// 程序发布通道
 
 wstring userId;									// 用户GUID
@@ -870,6 +870,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			}
 			// 软件版本
 			{
+				unique_lock<shared_mutex> lock(setlistUpdateMutex);
 				setlist.enableAutoUpdate = true;
 				setlist.UpdateChannel = "LTS";
 				{
@@ -963,8 +964,11 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 							setlist.component.shortcutButton.keyboard.keyboardAltF4 = false;
 						}
 						{
-							setlist.component.shortcutButton.rollCall.IslandCaller = false;
-							setlist.component.shortcutButton.rollCall.SecRandom = false;
+							setlist.component.shortcutButton.rollCall.IslandCaller1 = false;
+							setlist.component.shortcutButton.rollCall.IslandCaller2 = false;
+							setlist.component.shortcutButton.rollCall.SecRandom1 = false;
+							setlist.component.shortcutButton.rollCall.SecRandom2 = false;
+							setlist.component.shortcutButton.rollCall.SecRandom2Compat = false;
 							setlist.component.shortcutButton.rollCall.NamePicker = false;
 						}
 						{

@@ -149,12 +149,35 @@ bool PptUiIsInRoundRect(float x, float y, PptUiRoundRectWidgetClass pptUiRoundRe
 
 	return false;
 }
+bool PptUiIsLeftButtonPressed(ExMessage& m)
+{
+	while (hiex::peekmessage_win32(&m, EM_MOUSE, true, ppt_window))
+	{
+		if (m.message == WM_LBUTTONUP || (m.message == WM_MOUSEMOVE && !m.lbutton)) return false;
+	}
+
+	return (GetAsyncKeyState(VK_LBUTTON) & 0x8000) != 0;
+}
+bool PptUiIsLeftButtonPressedInRoundRect(ExMessage& m, PptUiRoundRectWidgetClass pptUiRoundRectWidget)
+{
+	if (!PptUiIsLeftButtonPressed(m)) return false;
+
+	POINT pt;
+	GetCursorPos(&pt);
+	if (!ScreenToClient(ppt_window, &pt)) return false;
+
+	return PptUiIsInRoundRect((float)pt.x, (float)pt.y, pptUiRoundRectWidget);
+}
+void PptUiReleaseMouseCapture()
+{
+	if (GetCapture() == ppt_window) ReleaseCapture();
+}
 
 IMAGE PptIcon[6]; // PPT 控件的按键图标
 IMAGE PptWindowBackground; // PPT 窗口背景画布
 
-bool PptUiChangeSignal;
-int PptUiAllReplaceSignal;
+IdtAtomic<bool> PptUiChangeSignal;
+IdtAtomic<int> PptUiAllReplaceSignal;
 
 // -------------------------
 // ppt 信息
@@ -233,78 +256,134 @@ LRESULT CALLBACK PptWindowMsgCallback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 
 	case WM_TOUCH:
 	{
+		// 由于是专门使用 static 来存储当前窗口的触摸信息，所以该过程函数仅能给 ppt_window 使用。
+
 		static DWORD activeTouchId = 0;   // 0表示无活动ID
 		static bool isTouchActive = false;
+		static bool activeTouchIsPrimary = false;
+		static short activeTouchX = 0;
+		static short activeTouchY = 0;
 
 		UINT cInputs = LOWORD(wParam);
-		TOUCHINPUT inputs[32];
-		if (GetTouchInputInfo((HTOUCHINPUT)lParam, cInputs, inputs, sizeof(TOUCHINPUT)))
+		std::vector<TOUCHINPUT> inputs(cInputs);
+		if (GetTouchInputInfo((HTOUCHINPUT)lParam, cInputs, inputs.data(), sizeof(TOUCHINPUT)))
 		{
-			bool touchIdCheck = false; // 检测当前活动ID是否还存在
-			short x = 0, y = 0; // 坐标
+			POINT pt;
+			bool hasPrimaryTouch = false;
+			bool fallbackTouchLocked = false;
+
+			for (UINT i = 0; i < cInputs; i++)
+			{
+				if (inputs[i].dwFlags & TOUCHEVENTF_PRIMARY)
+				{
+					hasPrimaryTouch = true;
+					break;
+				}
+			}
 
 			for (UINT i = 0; i < cInputs; i++)
 			{
 				const TOUCHINPUT& ti = inputs[i];
+				bool isPrimaryTouch = (ti.dwFlags & TOUCHEVENTF_PRIMARY) != 0;
+				bool canLockFallbackTouch = !hasPrimaryTouch && !isTouchActive && !fallbackTouchLocked;
 
 				double xO = static_cast<double>(ti.x) / 100.0;
 				double yO = static_cast<double>(ti.y) / 100.0;
-				x = static_cast<short>(xO + 0.5);
-				y = static_cast<short>(yO + 0.5);
 
-				if (ti.dwFlags & TOUCHEVENTF_DOWN)
+				pt.x = static_cast<LONG>(xO + 0.5);
+				pt.y = static_cast<LONG>(yO + 0.5);
+				ScreenToClient(hWnd, &pt);
+
+				if ((ti.dwFlags & TOUCHEVENTF_DOWN) && (isPrimaryTouch || canLockFallbackTouch))
 				{
-					// 如果当前无activeID，则锁定第一个DOWN点
+					if (isTouchActive && activeTouchId != ti.dwID)
+					{
+						activeTouchId = 0;
+						isTouchActive = false;
+						activeTouchIsPrimary = false;
+
+						{
+							ExMessage msgMouse = {};
+							msgMouse.message = WM_LBUTTONUP;
+							msgMouse.x = activeTouchX;
+							msgMouse.y = activeTouchY;
+							msgMouse.lbutton = false;
+
+							int index = hiex::GetWindowIndex(hWnd, false);
+							unique_lock lg_vecWindows_vecMessage_sm(hiex::g_vecWindows_vecMessage_sm[index]);
+							hiex::g_vecWindows[index].vecMessage.push_back(msgMouse);
+							lg_vecWindows_vecMessage_sm.unlock();
+						}
+					}
+
+					// 如果当前无 activeID，则锁定 primary touch；没有 primary 标志时兜底第一个 DOWN 点
 					if (!isTouchActive)
 					{
 						activeTouchId = ti.dwID;
 						isTouchActive = true;
+						activeTouchIsPrimary = isPrimaryTouch;
+						fallbackTouchLocked = !isPrimaryTouch;
+
+						activeTouchX = pt.x;
+						activeTouchY = pt.y;
 
 						{
 							ExMessage msgMouse = {};
 							msgMouse.message = WM_LBUTTONDOWN;
-							msgMouse.x = x;
-							msgMouse.y = y;
+							msgMouse.x = pt.x;
+							msgMouse.y = pt.y;
 							msgMouse.lbutton = true;
 
-							int index = hiex::GetWindowIndex(ppt_window, false);
+							int index = hiex::GetWindowIndex(hWnd, false);
 							unique_lock lg_vecWindows_vecMessage_sm(hiex::g_vecWindows_vecMessage_sm[index]);
 							hiex::g_vecWindows[index].vecMessage.push_back(msgMouse);
 							lg_vecWindows_vecMessage_sm.unlock();
 						}
 					}
 				}
-				if (ti.dwFlags & TOUCHEVENTF_MOVE)
+				bool canTranslateActiveTouch = isTouchActive && ti.dwID == activeTouchId && (isPrimaryTouch || !activeTouchIsPrimary || !hasPrimaryTouch);
+
+				if ((ti.dwFlags & TOUCHEVENTF_MOVE) && canTranslateActiveTouch)
 				{
 					if (isTouchActive && ti.dwID == activeTouchId)
 					{
-						ExMessage msgMouse = {};
-						msgMouse.message = WM_MOUSEMOVE;
-						msgMouse.x = x;
-						msgMouse.y = y;
-						msgMouse.lbutton = true;
+						if (isPrimaryTouch) activeTouchIsPrimary = true;
+						activeTouchX = pt.x;
+						activeTouchY = pt.y;
 
-						int index = hiex::GetWindowIndex(ppt_window, false);
-						unique_lock lg_vecWindows_vecMessage_sm(hiex::g_vecWindows_vecMessage_sm[index]);
-						hiex::g_vecWindows[index].vecMessage.push_back(msgMouse);
-						lg_vecWindows_vecMessage_sm.unlock();
+						{
+							ExMessage msgMouse = {};
+							msgMouse.message = WM_MOUSEMOVE;
+							msgMouse.x = pt.x;
+							msgMouse.y = pt.y;
+							msgMouse.lbutton = true;
+
+							int index = hiex::GetWindowIndex(hWnd, false);
+							unique_lock lg_vecWindows_vecMessage_sm(hiex::g_vecWindows_vecMessage_sm[index]);
+							hiex::g_vecWindows[index].vecMessage.push_back(msgMouse);
+							lg_vecWindows_vecMessage_sm.unlock();
+						}
 					}
 				}
-				if (ti.dwFlags & TOUCHEVENTF_UP)
+				if ((ti.dwFlags & TOUCHEVENTF_UP) && canTranslateActiveTouch)
 				{
 					if (isTouchActive && ti.dwID == activeTouchId)
 					{
 						activeTouchId = 0;
 						isTouchActive = false;
+						activeTouchIsPrimary = false;
+
+						activeTouchX = pt.x;
+						activeTouchY = pt.y;
 
 						{
 							ExMessage msgMouse = {};
 							msgMouse.message = WM_LBUTTONUP;
-							msgMouse.x = x;
-							msgMouse.y = y;
+							msgMouse.x = pt.x;
+							msgMouse.y = pt.y;
 							msgMouse.lbutton = false;
 
-							int index = hiex::GetWindowIndex(ppt_window, false);
+							int index = hiex::GetWindowIndex(hWnd, false);
 							unique_lock lg_vecWindows_vecMessage_sm(hiex::g_vecWindows_vecMessage_sm[index]);
 							hiex::g_vecWindows[index].vecMessage.push_back(msgMouse);
 							lg_vecWindows_vecMessage_sm.unlock();
@@ -312,26 +391,6 @@ LRESULT CALLBACK PptWindowMsgCallback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 					}
 				}
 
-				if (isTouchActive && ti.dwID == activeTouchId) touchIdCheck = true;
-			}
-
-			if (isTouchActive && !touchIdCheck)
-			{
-				activeTouchId = 0;
-				isTouchActive = false;
-
-				{
-					ExMessage msgMouse = {};
-					msgMouse.message = WM_LBUTTONUP;
-					msgMouse.x = x;
-					msgMouse.y = y;
-					msgMouse.lbutton = false;
-
-					int index = hiex::GetWindowIndex(ppt_window, false);
-					unique_lock lg_vecWindows_vecMessage_sm(hiex::g_vecWindows_vecMessage_sm[index]);
-					hiex::g_vecWindows[index].vecMessage.push_back(msgMouse);
-					lg_vecWindows_vecMessage_sm.unlock();
-				}
 			}
 
 			CloseTouchInputHandle((HTOUCHINPUT)lParam);
@@ -353,7 +412,7 @@ LRESULT CALLBACK PptWindowMsgCallback(HWND hWnd, UINT msg, WPARAM wParam, LPARAM
 		if ((extraInfo & 0xFFFFFF00) == 0xFF515700) return 0;
 
 		// 否则当成真正的鼠标消息处理
-		// 您的鼠标处理逻辑
+
 		break;
 	}
 
@@ -3472,10 +3531,11 @@ void PptInteract()
 						PreviousPptSlides();
 						pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget_PreviousPage].FillColor.v = RGBA(200, 200, 200, 255);
 
+						SetCapture(ppt_window);
 						std::chrono::high_resolution_clock::time_point KeyboardInteractionManipulated = std::chrono::high_resolution_clock::now();
 						while (1)
 						{
-							if (!IdtInputs::IsKeyBoardDown(VK_LBUTTON)) break;
+							if (!PptUiIsLeftButtonPressedInRoundRect(m, pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget_PreviousPage])) break;
 							if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - KeyboardInteractionManipulated).count() >= 400)
 							{
 								PreviousPptSlides();
@@ -3484,6 +3544,7 @@ void PptInteract()
 
 							this_thread::sleep_for(chrono::milliseconds(15));
 						}
+						PptUiReleaseMouseCapture();
 
 						pptUiRoundRectWidgetTarget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget_PreviousPage].FillColor.v = RGBA(250, 250, 250, 160);
 						hiex::flushmessage_win32(EM_MOUSE, ppt_window);
@@ -3529,16 +3590,18 @@ void PptInteract()
 							NextPptSlides(temp_currentpage);
 							pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget_NextPage].FillColor.v = RGBA(200, 200, 200, 255);
 
+							SetCapture(ppt_window);
 							std::chrono::high_resolution_clock::time_point KeyboardInteractionManipulated = std::chrono::high_resolution_clock::now();
 							while (1)
 							{
-								if (!IdtInputs::IsKeyBoardDown(VK_LBUTTON)) break;
+								if (!PptUiIsLeftButtonPressedInRoundRect(m, pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget_NextPage])) break;
 
 								if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - KeyboardInteractionManipulated).count() >= 400)
 								{
 									temp_currentpage = PptInfoState.CurrentPage;
 									if (temp_currentpage == -1 && stateMode.StateModeSelect != StateModeSelectEnum::IdtSelection && penetrate.select == false)
 									{
+										PptUiReleaseMouseCapture();
 										if (CheckEndShow.Check())
 										{
 											ChangeStateModeToSelection();
@@ -3555,6 +3618,7 @@ void PptInteract()
 
 								this_thread::sleep_for(chrono::milliseconds(15));
 							}
+							PptUiReleaseMouseCapture();
 						}
 
 						pptUiRoundRectWidgetTarget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget_NextPage].FillColor.v = RGBA(250, 250, 250, 160);
@@ -3605,10 +3669,11 @@ void PptInteract()
 						PreviousPptSlides();
 						pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget_PreviousPage].FillColor.v = RGBA(200, 200, 200, 255);
 
+						SetCapture(ppt_window);
 						std::chrono::high_resolution_clock::time_point KeyboardInteractionManipulated = std::chrono::high_resolution_clock::now();
 						while (1)
 						{
-							if (!IdtInputs::IsKeyBoardDown(VK_LBUTTON)) break;
+							if (!PptUiIsLeftButtonPressedInRoundRect(m, pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget_PreviousPage])) break;
 							if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - KeyboardInteractionManipulated).count() >= 400)
 							{
 								PreviousPptSlides();
@@ -3617,6 +3682,7 @@ void PptInteract()
 
 							this_thread::sleep_for(chrono::milliseconds(15));
 						}
+						PptUiReleaseMouseCapture();
 
 						pptUiRoundRectWidgetTarget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget_PreviousPage].FillColor.v = RGBA(250, 250, 250, 160);
 						hiex::flushmessage_win32(EM_MOUSE, ppt_window);
@@ -3662,16 +3728,18 @@ void PptInteract()
 							NextPptSlides(temp_currentpage);
 							pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget_NextPage].FillColor.v = RGBA(200, 200, 200, 255);
 
+							SetCapture(ppt_window);
 							std::chrono::high_resolution_clock::time_point KeyboardInteractionManipulated = std::chrono::high_resolution_clock::now();
 							while (1)
 							{
-								if (!IdtInputs::IsKeyBoardDown(VK_LBUTTON)) break;
+								if (!PptUiIsLeftButtonPressedInRoundRect(m, pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget_NextPage])) break;
 
 								if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - KeyboardInteractionManipulated).count() >= 400)
 								{
 									temp_currentpage = PptInfoState.CurrentPage;
 									if (temp_currentpage == -1 && stateMode.StateModeSelect != StateModeSelectEnum::IdtSelection && penetrate.select == false)
 									{
+										PptUiReleaseMouseCapture();
 										if (CheckEndShow.Check())
 										{
 											ChangeStateModeToSelection();
@@ -3688,6 +3756,7 @@ void PptInteract()
 
 								this_thread::sleep_for(chrono::milliseconds(15));
 							}
+							PptUiReleaseMouseCapture();
 						}
 
 						pptUiRoundRectWidgetTarget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget_NextPage].FillColor.v = RGBA(250, 250, 250, 160);
@@ -3740,10 +3809,11 @@ void PptInteract()
 						PreviousPptSlides();
 						pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_LeftPageWidget_PreviousPage].FillColor.v = RGBA(200, 200, 200, 255);
 
+						SetCapture(ppt_window);
 						std::chrono::high_resolution_clock::time_point KeyboardInteractionManipulated = std::chrono::high_resolution_clock::now();
 						while (1)
 						{
-							if (!IdtInputs::IsKeyBoardDown(VK_LBUTTON)) break;
+							if (!PptUiIsLeftButtonPressedInRoundRect(m, pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_LeftPageWidget_PreviousPage])) break;
 							if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - KeyboardInteractionManipulated).count() >= 400)
 							{
 								PreviousPptSlides();
@@ -3752,6 +3822,7 @@ void PptInteract()
 
 							this_thread::sleep_for(chrono::milliseconds(15));
 						}
+						PptUiReleaseMouseCapture();
 
 						pptUiRoundRectWidgetTarget[PptUiRoundRectWidgetID::MiddleSide_LeftPageWidget_PreviousPage].FillColor.v = RGBA(250, 250, 250, 160);
 						hiex::flushmessage_win32(EM_MOUSE, ppt_window);
@@ -3797,16 +3868,18 @@ void PptInteract()
 							NextPptSlides(temp_currentpage);
 							pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_LeftPageWidget_NextPage].FillColor.v = RGBA(200, 200, 200, 255);
 
+							SetCapture(ppt_window);
 							std::chrono::high_resolution_clock::time_point KeyboardInteractionManipulated = std::chrono::high_resolution_clock::now();
 							while (1)
 							{
-								if (!IdtInputs::IsKeyBoardDown(VK_LBUTTON)) break;
+								if (!PptUiIsLeftButtonPressedInRoundRect(m, pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_LeftPageWidget_NextPage])) break;
 
 								if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - KeyboardInteractionManipulated).count() >= 400)
 								{
 									temp_currentpage = PptInfoState.CurrentPage;
 									if (temp_currentpage == -1 && stateMode.StateModeSelect != StateModeSelectEnum::IdtSelection && penetrate.select == false)
 									{
+										PptUiReleaseMouseCapture();
 										if (CheckEndShow.Check())
 										{
 											ChangeStateModeToSelection();
@@ -3823,6 +3896,7 @@ void PptInteract()
 
 								this_thread::sleep_for(chrono::milliseconds(15));
 							}
+							PptUiReleaseMouseCapture();
 						}
 
 						pptUiRoundRectWidgetTarget[PptUiRoundRectWidgetID::MiddleSide_LeftPageWidget_NextPage].FillColor.v = RGBA(250, 250, 250, 160);
@@ -3876,10 +3950,11 @@ void PptInteract()
 						PreviousPptSlides();
 						pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_RightPageWidget_PreviousPage].FillColor.v = RGBA(200, 200, 200, 255);
 
+						SetCapture(ppt_window);
 						std::chrono::high_resolution_clock::time_point KeyboardInteractionManipulated = std::chrono::high_resolution_clock::now();
 						while (1)
 						{
-							if (!IdtInputs::IsKeyBoardDown(VK_LBUTTON)) break;
+							if (!PptUiIsLeftButtonPressedInRoundRect(m, pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_RightPageWidget_PreviousPage])) break;
 							if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - KeyboardInteractionManipulated).count() >= 400)
 							{
 								PreviousPptSlides();
@@ -3888,6 +3963,7 @@ void PptInteract()
 
 							this_thread::sleep_for(chrono::milliseconds(15));
 						}
+						PptUiReleaseMouseCapture();
 
 						pptUiRoundRectWidgetTarget[PptUiRoundRectWidgetID::MiddleSide_RightPageWidget_PreviousPage].FillColor.v = RGBA(250, 250, 250, 160);
 						hiex::flushmessage_win32(EM_MOUSE, ppt_window);
@@ -3933,16 +4009,18 @@ void PptInteract()
 							NextPptSlides(temp_currentpage);
 							pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_RightPageWidget_NextPage].FillColor.v = RGBA(200, 200, 200, 255);
 
+							SetCapture(ppt_window);
 							std::chrono::high_resolution_clock::time_point KeyboardInteractionManipulated = std::chrono::high_resolution_clock::now();
 							while (1)
 							{
-								if (!IdtInputs::IsKeyBoardDown(VK_LBUTTON)) break;
+								if (!PptUiIsLeftButtonPressedInRoundRect(m, pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_RightPageWidget_NextPage])) break;
 
 								if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - KeyboardInteractionManipulated).count() >= 400)
 								{
 									temp_currentpage = PptInfoState.CurrentPage;
 									if (temp_currentpage == -1 && stateMode.StateModeSelect != StateModeSelectEnum::IdtSelection && penetrate.select == false)
 									{
+										PptUiReleaseMouseCapture();
 										if (CheckEndShow.Check())
 										{
 											ChangeStateModeToSelection();
@@ -3959,6 +4037,7 @@ void PptInteract()
 
 								this_thread::sleep_for(chrono::milliseconds(15));
 							}
+							PptUiReleaseMouseCapture();
 						}
 
 						pptUiRoundRectWidgetTarget[PptUiRoundRectWidgetID::MiddleSide_RightPageWidget_NextPage].FillColor.v = RGBA(250, 250, 250, 160);

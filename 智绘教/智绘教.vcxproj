@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|ARM64">
@@ -616,6 +616,7 @@
     <ClCompile Include="IdtUpdate.cpp" />
     <ClCompile Include="IdtWindow.cpp" />
     <ClCompile Include="Inkeys\Load\IdtFontLoad.cpp" />
+    <ClCompile Include="Inkeys\Helper\Helper.SecRandom.cppm" />
     <ClCompile Include="Inkeys\Other\IdtGesture.cpp" />
     <ClCompile Include="Inkeys\Other\IdtInputs.cpp" />
     <ClCompile Include="Inkeys\Thread\Thread.Status.cppm" />

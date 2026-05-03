@@ -1,4 +1,4 @@
-﻿#include "IdtConfiguration.h"
+#include "IdtConfiguration.h"
 
 #include "IdtText.h"
 #include "IdtState.h"
@@ -70,6 +70,7 @@ bool UnOccupyFile(HANDLE* hFile)
 }
 
 SetListStruct setlist;
+shared_mutex setlistUpdateMutex;
 Json::Value setlistVal;
 bool ReadSetting()
 {
@@ -206,15 +207,18 @@ bool ReadSetting()
 
 		if (setlistVal.isMember("UpdateSetting") && setlistVal["UpdateSetting"].isObject())
 		{
-			if (setlistVal["UpdateSetting"].isMember("EnableAutoUpdate") && setlistVal["UpdateSetting"]["EnableAutoUpdate"].isBool())
-				setlist.enableAutoUpdate = setlistVal["UpdateSetting"]["EnableAutoUpdate"].asBool();
-			if (setlistVal["UpdateSetting"].isMember("UpdateChannel") && setlistVal["UpdateSetting"]["UpdateChannel"].isString())
-				setlist.UpdateChannel = setlistVal["UpdateSetting"]["UpdateChannel"].asString();
-			if (setlistVal["UpdateSetting"].isMember("UpdateArchitecture") && setlistVal["UpdateSetting"]["UpdateArchitecture"].isString())
 			{
-				setlist.updateArchitecture = setlistVal["UpdateSetting"]["UpdateArchitecture"].asString();
-				if (setlist.updateArchitecture != "win32" && setlist.updateArchitecture != "win64" && setlist.updateArchitecture != "arm64")
-					setlist.updateArchitecture = "win32";
+				unique_lock<shared_mutex> lock(setlistUpdateMutex);
+				if (setlistVal["UpdateSetting"].isMember("EnableAutoUpdate") && setlistVal["UpdateSetting"]["EnableAutoUpdate"].isBool())
+					setlist.enableAutoUpdate = setlistVal["UpdateSetting"]["EnableAutoUpdate"].asBool();
+				if (setlistVal["UpdateSetting"].isMember("UpdateChannel") && setlistVal["UpdateSetting"]["UpdateChannel"].isString())
+					setlist.UpdateChannel = setlistVal["UpdateSetting"]["UpdateChannel"].asString();
+				if (setlistVal["UpdateSetting"].isMember("UpdateArchitecture") && setlistVal["UpdateSetting"]["UpdateArchitecture"].isString())
+				{
+					setlist.updateArchitecture = setlistVal["UpdateSetting"]["UpdateArchitecture"].asString();
+					if (setlist.updateArchitecture != "win32" && setlist.updateArchitecture != "win64" && setlist.updateArchitecture != "arm64")
+						setlist.updateArchitecture = "win32";
+				}
 			}
 		}
 
@@ -317,10 +321,16 @@ bool ReadSetting()
 				// rollCall
 				if (setlistVal["Component"]["ShortcutButton"].isMember("RollCall") && setlistVal["Component"]["ShortcutButton"]["RollCall"].isObject())
 				{
-					if (setlistVal["Component"]["ShortcutButton"]["RollCall"].isMember("IslandCaller") && setlistVal["Component"]["ShortcutButton"]["RollCall"]["IslandCaller"].isBool())
-						setlist.component.shortcutButton.rollCall.IslandCaller = setlistVal["Component"]["ShortcutButton"]["RollCall"]["IslandCaller"].asBool();
-					if (setlistVal["Component"]["ShortcutButton"]["RollCall"].isMember("SecRandom") && setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom"].isBool())
-						setlist.component.shortcutButton.rollCall.SecRandom = setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom"].asBool();
+					if (setlistVal["Component"]["ShortcutButton"]["RollCall"].isMember("IslandCaller1") && setlistVal["Component"]["ShortcutButton"]["RollCall"]["IslandCaller1"].isBool())
+						setlist.component.shortcutButton.rollCall.IslandCaller1 = setlistVal["Component"]["ShortcutButton"]["RollCall"]["IslandCaller1"].asBool();
+					if (setlistVal["Component"]["ShortcutButton"]["RollCall"].isMember("IslandCaller2") && setlistVal["Component"]["ShortcutButton"]["RollCall"]["IslandCaller2"].isBool())
+						setlist.component.shortcutButton.rollCall.IslandCaller2 = setlistVal["Component"]["ShortcutButton"]["RollCall"]["IslandCaller2"].asBool();
+					if (setlistVal["Component"]["ShortcutButton"]["RollCall"].isMember("SecRandom1") && setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom1"].isBool())
+						setlist.component.shortcutButton.rollCall.SecRandom1 = setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom1"].asBool();
+					if (setlistVal["Component"]["ShortcutButton"]["RollCall"].isMember("SecRandom2") && setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom2"].isBool())
+						setlist.component.shortcutButton.rollCall.SecRandom2 = setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom2"].asBool();
+					if (setlistVal["Component"]["ShortcutButton"]["RollCall"].isMember("SecRandom2Compat") && setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom2Compat"].isBool())
+						setlist.component.shortcutButton.rollCall.SecRandom2Compat = setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom2Compat"].asBool();
 					if (setlistVal["Component"]["ShortcutButton"]["RollCall"].isMember("NamePicker") && setlistVal["Component"]["ShortcutButton"]["RollCall"]["NamePicker"].isBool())
 						setlist.component.shortcutButton.rollCall.NamePicker = setlistVal["Component"]["ShortcutButton"]["RollCall"]["NamePicker"].asBool();
 				}
@@ -398,6 +408,15 @@ bool ReadSettingMini()
 bool WriteSetting()
 {
 	if (setlist.configurationSetting.enable) setlistVal.clear();
+	bool enableAutoUpdate;
+	string updateChannel;
+	string updateArchitecture;
+	{
+		shared_lock<shared_mutex> lock(setlistUpdateMutex);
+		enableAutoUpdate = setlist.enableAutoUpdate;
+		updateChannel = setlist.UpdateChannel;
+		updateArchitecture = setlist.updateArchitecture;
+	}
 	{
 		{
 			setlistVal["ConfigurationSetting"]["Enable"] = Json::Value(setlist.configurationSetting.enable);
@@ -452,9 +471,9 @@ bool WriteSetting()
 		}
 
 		{
-			setlistVal["UpdateSetting"]["EnableAutoUpdate"] = Json::Value(setlist.enableAutoUpdate);
-			setlistVal["UpdateSetting"]["UpdateChannel"] = Json::Value(setlist.UpdateChannel);
-			setlistVal["UpdateSetting"]["UpdateArchitecture"] = Json::Value(setlist.updateArchitecture);
+			setlistVal["UpdateSetting"]["EnableAutoUpdate"] = Json::Value(enableAutoUpdate);
+			setlistVal["UpdateSetting"]["UpdateChannel"] = Json::Value(updateChannel);
+			setlistVal["UpdateSetting"]["UpdateArchitecture"] = Json::Value(updateArchitecture);
 		}
 		{
 			setlistVal["BasicInfo"]["UserID"] = Json::Value(utf16ToUtf8(userId));
@@ -518,8 +537,11 @@ bool WriteSetting()
 				}
 				// rollCall
 				{
-					setlistVal["Component"]["ShortcutButton"]["RollCall"]["IslandCaller"] = Json::Value(setlist.component.shortcutButton.rollCall.IslandCaller);
-					setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom"] = Json::Value(setlist.component.shortcutButton.rollCall.SecRandom);
+					setlistVal["Component"]["ShortcutButton"]["RollCall"]["IslandCaller1"] = Json::Value(setlist.component.shortcutButton.rollCall.IslandCaller1);
+					setlistVal["Component"]["ShortcutButton"]["RollCall"]["IslandCaller2"] = Json::Value(setlist.component.shortcutButton.rollCall.IslandCaller2);
+					setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom1"] = Json::Value(setlist.component.shortcutButton.rollCall.SecRandom1);
+					setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom2"] = Json::Value(setlist.component.shortcutButton.rollCall.SecRandom2);
+					setlistVal["Component"]["ShortcutButton"]["RollCall"]["SecRandom2Compat"] = Json::Value(setlist.component.shortcutButton.rollCall.SecRandom2Compat);
 					setlistVal["Component"]["ShortcutButton"]["RollCall"]["NamePicker"] = Json::Value(setlist.component.shortcutButton.rollCall.NamePicker);
 				}
 				// linkage

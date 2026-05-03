@@ -1,14 +1,14 @@
 ﻿/*
- * @file		PptCOM.cs
- * @brief		智绘教项目 PPT 联动插件
- * @note		PPT 联动插件 相关模块
- *
- * @envir		.NET Framework 4.0
- * @site		https://github.com/Alan-CRL/Inkeys
- *
- * @author		Alan-CRL
- * @qq			2685549821
- * @email		alan-crl@foxmail.com
+* @file		PptCOM.cs
+* @brief		智绘教项目 PPT 联动插件
+* @note		PPT 联动插件 相关模块
+*
+* @envir		.NET Framework 4.0
+* @site		https://github.com/Alan-CRL/Inkeys
+*
+* @author		Alan-CRL
+* @qq			2685549821
+* @email		alan-crl@foxmail.com
 */
 
 // 首次编译需要确认 .NET Framework 版本为 4.0，如果不一致请执行 <切换 .NET Framework 指南>
@@ -111,7 +111,7 @@ namespace PptCOM
         }
         public string CheckCOM()
         {
-            string ret = "20260201a";
+            string ret = "20260501a";
             return ret;
         }
 
@@ -381,6 +381,56 @@ namespace PptCOM
             }
             return false;
         }
+        private static string[] GetApplicationMonikersFromProgIds()
+        {
+            string[] ApplicationProgIds = new[]
+            {
+                "PowerPoint.Application",
+                "KWPP.Application",
+                "Wpp.Application",
+                "WPP.Application",
+            };
+
+            List<string> monikers = new List<string>();
+
+            foreach (string progId in ApplicationProgIds)
+            {
+                Guid clsid;
+                if (CLSIDFromProgID(progId, out clsid) == 0 && clsid != Guid.Empty)
+                {
+                    string moniker = "!" + clsid.ToString("B").ToUpperInvariant();
+                    if (!ContainsMoniker(monikers, moniker))
+                    {
+                        monikers.Add(moniker);
+                    }
+                }
+            }
+
+            return monikers.ToArray();
+        }
+        private static bool ContainsMoniker(IEnumerable<string> monikers, string displayName)
+        {
+            if (monikers == null || string.IsNullOrEmpty(displayName))
+                return false;
+
+            foreach (string moniker in monikers)
+            {
+                if (string.Equals(displayName, moniker, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+
+            return false;
+        }
+        private static bool IsFallbackApplicationMoniker(string displayName)
+        {
+            string[] FallbackApplicationMonikers = new[]
+            {
+                "!{91493441-5A91-11CF-8700-00AA0060263B}",
+                "!{44720441-94BF-4940-926D-4F38FECF2A48}",
+            };
+
+            return ContainsMoniker(FallbackApplicationMonikers, displayName);
+        }
         private static bool IsValidSlideShowWindow(dynamic pptSlideShowWindow)
         {
             if (pptSlideShowWindow == null) return false;
@@ -531,6 +581,7 @@ namespace PptCOM
 
                 IMoniker[] moniker = new IMoniker[1];
                 IntPtr fetched = IntPtr.Zero;
+                string[] applicationMonikersFromProgIds = GetApplicationMonikersFromProgIds();
 
                 while (enumMoniker.Next(1, moniker, fetched) == 0)
                 {
@@ -551,19 +602,34 @@ namespace PptCOM
                         CreateBindCtx(0, out bindCtx);
                         moniker[0].GetDisplayName(bindCtx, null, out displayName);
 
-                        if (LooksLikePresentationFile(displayName) || displayName == "!{91493441-5A91-11CF-8700-00AA0060263B}")
+                        bool looksLikePresentationFile = LooksLikePresentationFile(displayName);
+                        bool isApplicationMoniker = ContainsMoniker(applicationMonikersFromProgIds, displayName);
+                        if (!isApplicationMoniker)
+                        {
+                            isApplicationMoniker = IsFallbackApplicationMoniker(displayName);
+                        }
+
+                        if (looksLikePresentationFile || isApplicationMoniker)
                         {
                             rot.GetObject(moniker[0], out comObject);
                             if (comObject != null)
                             {
-                                // 尝试通过 Presentation 对象获取 Application
-                                try
+                                if (isApplicationMoniker)
                                 {
-                                    // 使用反射获取 Application 属性
-                                    object appObj = comObject.GetType().InvokeMember("Application", BindingFlags.GetProperty, null, comObject, null);
-                                    candidateApp = appObj;
+                                    candidateApp = comObject;
+                                    comObject = null;
                                 }
-                                catch { }
+                                else
+                                {
+                                    // 尝试通过 Presentation 对象获取 Application
+                                    try
+                                    {
+                                        // 使用反射获取 Application 属性
+                                        object appObj = comObject.GetType().InvokeMember("Application", BindingFlags.GetProperty, null, comObject, null);
+                                        candidateApp = appObj;
+                                    }
+                                    catch { }
+                                }
                             }
                             else { }
                         }
@@ -843,45 +909,45 @@ namespace PptCOM
                                     }
 
                                     if (!busyRetry) try
-                                    {
-                                        // 关键修改：这里不要直接用 pptApplication +=，而是先强转
-                                        Microsoft.Office.Interop.PowerPoint.Application app = pptApplication as Microsoft.Office.Interop.PowerPoint.Application;
-
-                                        if (app != null)
                                         {
-                                            app.SlideShowNextSlide += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowNextSlideEventHandler(SlideShowChange);
-                                            app.SlideShowBegin += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowBeginEventHandler(SlideShowBegin);
-                                            app.SlideShowEnd += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowEndEventHandler(SlideShowShowEnd);
+                                            // 关键修改：这里不要直接用 pptApplication +=，而是先强转
+                                            Microsoft.Office.Interop.PowerPoint.Application app = pptApplication as Microsoft.Office.Interop.PowerPoint.Application;
 
-                                            try
+                                            if (app != null)
                                             {
-                                                app.PresentationBeforeClose += new Microsoft.Office.Interop.PowerPoint.EApplication_PresentationBeforeCloseEventHandler(PresentationBeforeClose);
+                                                app.SlideShowNextSlide += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowNextSlideEventHandler(SlideShowChange);
+                                                app.SlideShowBegin += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowBeginEventHandler(SlideShowBegin);
+                                                app.SlideShowEnd += new Microsoft.Office.Interop.PowerPoint.EApplication_SlideShowEndEventHandler(SlideShowShowEnd);
+
+                                                try
+                                                {
+                                                    app.PresentationBeforeClose += new Microsoft.Office.Interop.PowerPoint.EApplication_PresentationBeforeCloseEventHandler(PresentationBeforeClose);
+                                                }
+                                                catch
+                                                {
+                                                    Console.WriteLine($"无法注册事件 2!");
+                                                }
+
+                                                bindingEvents = true;
+                                                forcePolling = false;
+
+                                                Console.WriteLine($"事件注册成功!");
                                             }
-                                            catch
+                                            else
                                             {
-                                                Console.WriteLine($"无法注册事件 2!");
+                                                bindingEvents = false;
+                                                forcePolling = true;
+
+                                                Console.WriteLine($"转换 Application 接口失败，无法注册事件");
                                             }
-
-                                            bindingEvents = true;
-                                            forcePolling = false;
-
-                                            Console.WriteLine($"事件注册成功!");
                                         }
-                                        else
+                                        catch (Exception ex)
                                         {
                                             bindingEvents = false;
                                             forcePolling = true;
 
-                                            Console.WriteLine($"转换 Application 接口失败，无法注册事件");
+                                            Console.WriteLine($"无法注册事件 1! {ex.Message}");
                                         }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        bindingEvents = false;
-                                        forcePolling = true;
-
-                                        Console.WriteLine($"无法注册事件 1! {ex.Message}");
-                                    }
 
                                     if (!busyRetry) Console.WriteLine($"成功绑定! {pptApplication.Name}");
                                 }
@@ -1460,6 +1526,8 @@ namespace PptCOM
         private static extern int GetRunningObjectTable(int reserved, out IRunningObjectTable prot);
         [DllImport("ole32.dll")]
         private static extern int CreateBindCtx(int reserved, out IBindCtx ppbc);
+        [DllImport("ole32.dll", CharSet = CharSet.Unicode)]
+        private static extern int CLSIDFromProgID(string lpszProgID, out Guid pclsid);
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
