@@ -13,3 +13,14 @@
 /智绘教/x64/
 /智绘教/ARM64/
 /auto upload.bat
+
+# 编译产物（任意层级）
+x64/
+ARM64/
+Release/
+Debug/
+*.pdb
+*.iobj
+*.ipdb
+*.obj
+*.tlog
