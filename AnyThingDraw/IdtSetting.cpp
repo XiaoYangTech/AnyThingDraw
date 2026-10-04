@@ -1786,10 +1786,6 @@ void SettingMain()
 							ImGui::BeginChild("版本信息", { 750.0f * settingGlobalScale,380.0f * settingGlobalScale }, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 							{
-								ImGui::SetCursorPos({ 35.0f * settingGlobalScale,20.0f * settingGlobalScale });
-								ImGui::Image((ImTextureID)(intptr_t)TextureSettingSign[1], ImVec2((float)settingSign[1].width, (float)settingSign[1].height));
-							}
-							{
 								ImGui::SetCursorPosY(ImGui::GetCursorPosY());
 								wstring text;
 								{
@@ -1799,7 +1795,8 @@ void SettingMain()
 #ifdef IDT_RELEASE
 									text += L"\n软件构建模式为发布版本";
 #else
-									text += L"\n"软件构建模式为非发布调测版本(DEBUG)";
+									text += L"
+软件构建模式为非发布调测版本";
 #endif
 								}
 
