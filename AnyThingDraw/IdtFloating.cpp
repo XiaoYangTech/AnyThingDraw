@@ -575,7 +575,7 @@ void DrawScreen()
 					UIControl[L"Image/Sign1/frame_transparency"] = { 255, 300, 1 };
 
 					UIControlColor[L"Ellipse/Ellipse1/fill"] = { RGBA(0, 0, 0, 150), 10, 1 };
-					UIControlColor[L"Ellipse/Ellipse1/frame"] = { RGB(255, 255, 255), 2, 1 };
+					UIControlColor[L"Ellipse/Ellipse1/frame"] = { RGB(255, 255, 255), 10, 1 };
 				}
 				//圆角矩形
 				{
@@ -1313,7 +1313,8 @@ void DrawScreen()
 				{
 					if (true) UIControlColorTarget[L"Ellipse/Ellipse1/fill"].v = RGBA(0, 0, 0, 150);
 
-UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = RGBA(255, 255, 255, 255); // 展开态恒定白色边框
+if (stateMode.StateModeSelect != StateModeSelectEnum::IdtSelection && stateMode.StateModeSelect != StateModeSelectEnum::IdtEraser) UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = floatingInfo.brushColor;
+					else UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = RGBA(255, 255, 225, 255);
 
 					UIControlTarget[L"Image/Sign1/frame_transparency"].v = float(255);
 				}
@@ -2116,7 +2117,7 @@ UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = RGBA(255, 255, 255, 255); //
 				{
 					UIControlColorTarget[L"Ellipse/Ellipse1/fill"].v = RGBA(0, 111, 225, 255);
 
-					if (true) UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = RGBA(255, 255, 255, 255); // 收起态恒定白色边框
+					if (true) UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = RGBA(0, 111, 225, 255);
 
 					UIControlTarget[L"Image/Sign1/frame_transparency"].v = float(255);
 				}
