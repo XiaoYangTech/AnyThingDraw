@@ -4,7 +4,7 @@
 * @note		PPT 联动插件 相关模块
 *
 * @envir		.NET Framework 4.0
-* @site		https://github.com/Alan-CRL/Inkeys
+* @site		https://github.com/Alan-CRL/AnyThingDraw
 *
 * @author		Alan-CRL
 * @qq			2685549821
