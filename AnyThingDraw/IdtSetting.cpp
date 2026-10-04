@@ -1695,8 +1695,7 @@ void SettingMain()
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(0, 0, 0, 15));
 							if (ImGui::Button("立即更新", { 100.0f * settingGlobalScale,30.0f * settingGlobalScale }))
 							{
-								mandatoryUpdate = true;
-								AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+								if (!latestDownloadUrl.empty()) ShellExecuteW(NULL, NULL, latestDownloadUrl.c_str(), NULL, NULL, SW_SHOWNORMAL);
 							}
 						}
 
@@ -1738,8 +1737,7 @@ void SettingMain()
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(0, 0, 0, 15));
 							if (ImGui::Button("手动更新", { 100.0f * settingGlobalScale,30.0f * settingGlobalScale }))
 							{
-								mandatoryUpdate = true;
-								AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+								if (!latestDownloadUrl.empty()) ShellExecuteW(NULL, NULL, latestDownloadUrl.c_str(), NULL, NULL, SW_SHOWNORMAL);
 							}
 						}
 
@@ -1917,78 +1915,6 @@ void SettingMain()
 						}
 						ImGui::EndChild();
 					}
-					{
-						ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 30.0f * settingGlobalScale);
-						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
-						PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 255, 255, 0));
-						ImGui::BeginChild("软件版本#2", { 750.0f * settingGlobalScale,100.0f * settingGlobalScale }, false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-
-						{
-							ImGui::SetCursorPos({ 0.0f * settingGlobalScale, 0.0f * settingGlobalScale });
-							ImFontMain->Scale = 0.6f, PushFontNum++, ImGui::PushFont(ImFontMain);
-							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-							ImGui::TextUnformatted("用户信息");
-						}
-
-						{
-							ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 10.0f * settingGlobalScale);
-							PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-							PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.0f);
-							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(251, 251, 251, 255));
-							ImGui::BeginChild("复制用户标识符", { 750.0f * settingGlobalScale,70.0f * settingGlobalScale }, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
-
-							float cursosPosY = 0;
-							{
-								ImGui::SetCursorPos({ 20.0f * settingGlobalScale, cursosPosY + 20.0f * settingGlobalScale });
-								ImFontMain->Scale = 0.6f, PushFontNum++, ImGui::PushFont(ImFontMain);
-								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-								ImGui::TextUnformatted("复制用户标识符");
-							}
-							{
-								ImGui::SetCursorPos({ 20.0f * settingGlobalScale, ImGui::GetCursorPosY() });
-								ImFontMain->Scale = 0.5f, PushFontNum++, ImGui::PushFont(ImFontMain);
-								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(120, 120, 120, 255));
-
-								ImGui::TextUnformatted(("用户标识符"" " + utf16ToUtf8(userId)).c_str());
-							}
-							{
-								ImGui::SetCursorPos({ 630.0f * settingGlobalScale, cursosPosY + 20.0f * settingGlobalScale });
-								ImFontMain->Scale = 0.5f, PushFontNum++, ImGui::PushFont(ImFontMain);
-								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(255, 255, 255, 179));
-								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(249, 249, 249, 128));
-								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(249, 249, 249, 77));
-								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 228));
-								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(0, 0, 0, 15));
-								if (ImGui::Button("复制", { 100.0f * settingGlobalScale,30.0f * settingGlobalScale }))
-								{
-									OpenClipboard(NULL); // 打开剪切板
-									EmptyClipboard(); // 清空剪切板
-									size_t size = (userId.length() + 1) * sizeof(wchar_t); // 计算需要的内存大小（包括结尾的null字符）
-									HGLOBAL hGlobal = GlobalAlloc(GMEM_MOVEABLE, size); // 分配全局内存
-									wchar_t* pDest = (wchar_t*)GlobalLock(hGlobal); // 锁定内存并获取指针
-									wcscpy_s(pDest, userId.length() + 1, userId.c_str()); // 复制文本到全局内存
-									GlobalUnlock(hGlobal); // 解锁内存
-									SetClipboardData(CF_UNICODETEXT, hGlobal); // 设置剪切板数据
-									CloseClipboard(); // 关闭剪切板
-								}
-							}
-
-							{
-								if (PushStyleColorNum >= 0) ImGui::PopStyleColor(PushStyleColorNum), PushStyleColorNum = 0;
-								if (PushStyleVarNum >= 0) ImGui::PopStyleVar(PushStyleVarNum), PushStyleVarNum = 0;
-								while (PushFontNum) PushFontNum--, ImGui::PopFont();
-							}
-							ImGui::EndChild();
-						}
-
-						{
-							if (PushStyleColorNum >= 0) ImGui::PopStyleColor(PushStyleColorNum), PushStyleColorNum = 0;
-							if (PushStyleVarNum >= 0) ImGui::PopStyleVar(PushStyleVarNum), PushStyleVarNum = 0;
-							while (PushFontNum) PushFontNum--, ImGui::PopFont();
-						}
-						ImGui::EndChild();
-					}
 					if (AutomaticUpdateState != AutomaticUpdateStateEnum::UpdateAnyThingDraw3)
 					{
 						ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 30.0f * settingGlobalScale);
@@ -2043,9 +1969,7 @@ void SettingMain()
 										WriteSetting();
 									}
 
-									mandatoryUpdate = true;
-									if (AutomaticUpdateState == AutomaticUpdateStateEnum::UpdateNotStarted) thread(AutomaticUpdate).detach();
-									else AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+									if (!latestDownloadUrl.empty()) ShellExecuteW(NULL, NULL, latestDownloadUrl.c_str(), NULL, NULL, SW_SHOWNORMAL);
 								}
 							}
 
@@ -9133,8 +9057,7 @@ void SettingMain()
 							ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 10.0f * settingGlobalScale);
 							if (ImGui::TextLink("更新到最新版本"))
 							{
-								mandatoryUpdate = true;
-								AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+								if (!latestDownloadUrl.empty()) ShellExecuteW(NULL, NULL, latestDownloadUrl.c_str(), NULL, NULL, SW_SHOWNORMAL);
 							}
 						}
 
@@ -9209,8 +9132,7 @@ void SettingMain()
 							ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 10.0f * settingGlobalScale);
 							if (ImGui::TextLink("立即更新"))
 							{
-								mandatoryUpdate = true;
-								AutomaticUpdateState = AutomaticUpdateStateEnum::UpdateObtainInformation;
+								if (!latestDownloadUrl.empty()) ShellExecuteW(NULL, NULL, latestDownloadUrl.c_str(), NULL, NULL, SW_SHOWNORMAL);
 							}
 
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_TextLink, IM_COL32(0, 95, 183, 255));
