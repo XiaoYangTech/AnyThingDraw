@@ -2120,7 +2120,7 @@ int drawpad_main()
 	//初始化数值
 	{
 		//屏幕快照处理
-		LoadDrawpad();
+// LoadDrawpad(); // 历史画布功能已删除
 
 		drawingScale = GetDrawingScale();
 		stopTimingError = GetStopTimingError();
