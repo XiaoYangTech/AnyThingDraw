@@ -392,7 +392,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 					}
 					else
 					{
-						if (!isProcessRunning((main_path + L"智绘教.exe").c_str()))
+						if (!isProcessRunning((main_path + L"AnyThingDraw.exe").c_str()))
 							break;
 					}
 
@@ -402,7 +402,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
 				error_code ec;
 				if (!old_name.empty()) filesystem::remove(main_path + old_name, ec);
-				else filesystem::remove(main_path + L"智绘教.exe", ec);
+				else filesystem::remove(main_path + L"AnyThingDraw.exe", ec);
 
 				wstring target = main_path + L"AnyThingDraw" + L".exe";
 				filesystem::copy_file(globalPath + representation, target, filesystem::copy_options::overwrite_existing, ec);
@@ -423,7 +423,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 				wstring main_path = directory.parent_path().parent_path().wstring() + L"\\";
 
 				if (!old_name.empty()) ShellExecuteW(NULL, NULL, (main_path + old_name).c_str(), NULL, NULL, SW_SHOWNORMAL);
-				else ShellExecuteW(NULL, NULL, (main_path + L"智绘教.exe").c_str(), NULL, NULL, SW_SHOWNORMAL);
+				else ShellExecuteW(NULL, NULL, (main_path + L"AnyThingDraw.exe").c_str(), NULL, NULL, SW_SHOWNORMAL);
 
 				return 0;
 			}
