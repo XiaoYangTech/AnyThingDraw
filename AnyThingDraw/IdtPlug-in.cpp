@@ -2403,7 +2403,7 @@ void PptInfo()
 			}
 		}
 
-		this_thread::sleep_for(chrono::milliseconds(500));
+		this_thread::sleep_for(chrono::milliseconds(250));
 	}
 }
 void PptDraw()
@@ -3620,18 +3620,6 @@ void PptInteract()
 
 			if (pptComSetlist.showBottomBoth)
 			{
-				// 点击页码打开大纲视图
-				if (pptComSetlist.middlePageNumOpenOutline && PptUiIsInRoundRect(m.x, m.y, pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget]))
-				{
-					if (m.message == WM_LBUTTONDOWN && m.x > pptUiWordsWidgetTarget[PptUiWordsWidgetID::BottomSide_LeftPageNum_Above].Left.v - 5.0f && m.x < pptUiWordsWidgetTarget[PptUiWordsWidgetID::BottomSide_LeftPageNum_Above].Right.v + 5.0f)
-					{
-						FocusPptShow();
-						ViewPptShow();
-
-						hiex::flushmessage_win32(EM_MOUSE, ppt_window);
-					}
-				}
-
 				// 底部左侧控件 上一页
 				if (PptUiIsInRoundRect(m.x, m.y, pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget_PreviousPage]))
 				{
@@ -3762,21 +3750,9 @@ void PptInteract()
 						{
 							if (IsInRect(m.x, m.y, { long(pptUiWordsWidget[PptUiWordsWidgetID::BottomSide_LeftPageNum_Above].Left.v + 5.0f * pptComSetlist.bottomSideBothWidgetScale), long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget].Y.v), long(pptUiWordsWidget[PptUiWordsWidgetID::BottomSide_LeftPageNum_Above].Right.v - 5.0f * pptComSetlist.bottomSideBothWidgetScale), long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget].Y.v + pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget].Height.v) }))
 							{
-								ViewPptShow();
+								if (pptComSetlist.middlePageNumOpenOutline) ViewPptShow();
 							}
 						}
-
-						hiex::flushmessage_win32(EM_MOUSE, ppt_window);
-					}
-				}
-
-				// 点击页码打开大纲视图
-				if (pptComSetlist.middlePageNumOpenOutline && PptUiIsInRoundRect(m.x, m.y, pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget]))
-				{
-					if (m.message == WM_LBUTTONDOWN && m.x > pptUiWordsWidgetTarget[PptUiWordsWidgetID::BottomSide_RightPageNum_Above].Left.v - 5.0f && m.x < pptUiWordsWidgetTarget[PptUiWordsWidgetID::BottomSide_RightPageNum_Above].Right.v + 5.0f)
-					{
-						FocusPptShow();
-						ViewPptShow();
 
 						hiex::flushmessage_win32(EM_MOUSE, ppt_window);
 					}
@@ -3912,7 +3888,7 @@ void PptInteract()
 						{
 							if (IsInRect(m.x, m.y, { long(pptUiWordsWidget[PptUiWordsWidgetID::BottomSide_RightPageNum_Above].Left.v + 5.0f * pptComSetlist.bottomSideBothWidgetScale), long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget].Y.v), long(pptUiWordsWidget[PptUiWordsWidgetID::BottomSide_RightPageNum_Above].Right.v - 5.0f * pptComSetlist.bottomSideBothWidgetScale), long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget].Y.v + pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget].Height.v) }))
 							{
-								ViewPptShow();
+								if (pptComSetlist.middlePageNumOpenOutline) ViewPptShow();
 							}
 						}
 
