@@ -1314,7 +1314,7 @@ void DrawScreen()
 					if (true) UIControlColorTarget[L"Ellipse/Ellipse1/fill"].v = RGBA(0, 0, 0, 150);
 
 					if (stateMode.StateModeSelect != StateModeSelectEnum::IdtSelection && stateMode.StateModeSelect != StateModeSelectEnum::IdtEraser) UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = floatingInfo.brushColor;
-					else UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = RGBA(255, 255, 225, 255);
+					else UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = RGBA(0, 111, 225, 255); // 展开态也保持蓝色边框（消除白色外圈）
 
 					UIControlTarget[L"Image/Sign1/frame_transparency"].v = float(255);
 				}
