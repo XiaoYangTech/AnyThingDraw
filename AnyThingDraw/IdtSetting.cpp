@@ -1524,7 +1524,7 @@ void SettingMain()
 							{
 								ImFontMain->Scale = 0.8f, PushFontNum++, ImGui::PushFont(ImFontMain);
 								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255 / 255.0f, 255 / 255.0f, 255 / 255.0f, 1.0f));
-								ImGui::TextUnformatted("AlanCRL");
+								ImGui::TextUnformatted("小杨聊科技");
 							}
 							ImGui::SetCursorPos({ Cx + 160.0f * settingGlobalScale,Cy + 418.0f * settingGlobalScale });
 							{
@@ -1537,7 +1537,7 @@ void SettingMain()
 								ImGui::SetCursorPos({ Cx + 106.0f * settingGlobalScale,Cy + 465.0f * settingGlobalScale });
 								ImFontMain->Scale = 0.9f, PushFontNum++, ImGui::PushFont(ImFontMain);
 								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(255 / 255.0f, 255 / 255.0f, 255 / 255.0f, 1.0f));
-								ImGui::TextUnformatted("\uf902");
+								ImGui::TextUnformatted("\uf901");
 
 								ImGui::SetCursorPos({ Cx + 160.0f * settingGlobalScale,Cy + 465.0f * settingGlobalScale });
 								ImFontMain->Scale = 0.8f, PushFontNum++, ImGui::PushFont(ImFontMain);
