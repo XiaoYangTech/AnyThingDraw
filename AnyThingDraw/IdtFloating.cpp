@@ -574,7 +574,7 @@ void DrawScreen()
 					UIControl[L"Ellipse/Ellipse1/height"] = { 94, 5, 1 };
 					UIControl[L"Image/Sign1/frame_transparency"] = { 255, 300, 1 };
 
-					UIControlColor[L"Ellipse/Ellipse1/fill"] = { RGBA(0, 0, 0, 150), 2, 1 };
+					UIControlColor[L"Ellipse/Ellipse1/fill"] = { RGBA(0, 0, 0, 150), 10, 1 };
 					UIControlColor[L"Ellipse/Ellipse1/frame"] = { RGB(255, 255, 255), 2, 1 };
 				}
 				//圆角矩形

@@ -3745,7 +3745,8 @@ void PptInteract()
 				{
 					if (m.message == WM_LBUTTONDOWN)
 					{
-						auto moveDis = PptBottomPageWidgetSeekBar(m.x, m.y, false);
+						double moveDis = 0;
+						if (pptComSetlist.allowWidgetDrag) moveDis = PptBottomPageWidgetSeekBar(m.x, m.y, false);
 						if (moveDis <= 20)
 						{
 							if (IsInRect(m.x, m.y, { long(pptUiWordsWidget[PptUiWordsWidgetID::BottomSide_LeftPageNum_Above].Left.v + 5.0f * pptComSetlist.bottomSideBothWidgetScale), long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget].Y.v), long(pptUiWordsWidget[PptUiWordsWidgetID::BottomSide_LeftPageNum_Above].Right.v - 5.0f * pptComSetlist.bottomSideBothWidgetScale), long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget].Y.v + pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_LeftPageWidget].Height.v) }))
@@ -3883,7 +3884,8 @@ void PptInteract()
 				{
 					if (m.message == WM_LBUTTONDOWN)
 					{
-						auto moveDis = PptBottomPageWidgetSeekBar(m.x, m.y, true);
+						double moveDis = 0;
+						if (pptComSetlist.allowWidgetDrag) moveDis = PptBottomPageWidgetSeekBar(m.x, m.y, true);
 						if (moveDis <= 20)
 						{
 							if (IsInRect(m.x, m.y, { long(pptUiWordsWidget[PptUiWordsWidgetID::BottomSide_RightPageNum_Above].Left.v + 5.0f * pptComSetlist.bottomSideBothWidgetScale), long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget].Y.v), long(pptUiWordsWidget[PptUiWordsWidgetID::BottomSide_RightPageNum_Above].Right.v - 5.0f * pptComSetlist.bottomSideBothWidgetScale), long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget].Y.v + pptUiRoundRectWidget[PptUiRoundRectWidgetID::BottomSide_RightPageWidget].Height.v) }))
@@ -4023,7 +4025,8 @@ void PptInteract()
 				{
 					if (m.message == WM_LBUTTONDOWN)
 					{
-						auto moveDis = PptMiddlePageWidgetSeekBar(m.x, m.y, false);
+						double moveDis = 0;
+						if (pptComSetlist.allowWidgetDrag) moveDis = PptMiddlePageWidgetSeekBar(m.x, m.y, false);
 						if (moveDis <= 20)
 						{
 							if (IsInRect(m.x, m.y, { long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_LeftPageWidget].X.v),
@@ -4164,7 +4167,8 @@ void PptInteract()
 				{
 					if (m.message == WM_LBUTTONDOWN)
 					{
-						auto moveDis = PptMiddlePageWidgetSeekBar(m.x, m.y, true);
+						double moveDis = 0;
+						if (pptComSetlist.allowWidgetDrag) moveDis = PptMiddlePageWidgetSeekBar(m.x, m.y, true);
 						if (moveDis <= 20)
 						{
 							if (IsInRect(m.x, m.y, { long(pptUiRoundRectWidget[PptUiRoundRectWidgetID::MiddleSide_RightPageWidget].X.v),
