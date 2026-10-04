@@ -1315,6 +1315,7 @@ void DrawScreen()
 
 					if (stateMode.StateModeSelect != StateModeSelectEnum::IdtSelection && stateMode.StateModeSelect != StateModeSelectEnum::IdtEraser) UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = floatingInfo.brushColor;
 					else UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = RGBA(255, 255, 225, 255);
+					UIControlColor[L"Ellipse/Ellipse1/frame"].v = UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v; // 瞬变
 
 					UIControlTarget[L"Image/Sign1/frame_transparency"].v = float(255);
 				}
@@ -2118,6 +2119,7 @@ void DrawScreen()
 					UIControlColorTarget[L"Ellipse/Ellipse1/fill"].v = RGBA(0, 111, 225, 255);
 
 					if (true) UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v = RGBA(0, 111, 225, 255);
+					UIControlColor[L"Ellipse/Ellipse1/frame"].v = UIControlColorTarget[L"Ellipse/Ellipse1/frame"].v; // 瞬变：避免过渡期出现浅色圈
 
 					UIControlTarget[L"Image/Sign1/frame_transparency"].v = float(255);
 				}

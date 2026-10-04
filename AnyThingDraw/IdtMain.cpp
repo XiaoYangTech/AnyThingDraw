@@ -1012,13 +1012,13 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
 		// 设备标识（亿方智云上报用，首次生成后持久化）
 		{
-			if (deviceKey.empty())
+			if (deviceKey.empty() || deviceKey.rfind(L"atdraw", 0) != 0)
 			{
 				std::random_device rd;
 				std::mt19937_64 gen(rd());
 				std::uniform_int_distribution<int> dist(0, 15);
 				const wchar_t* hexChars = L"0123456789abcdef";
-				wstring key = L"le_";
+				wstring key = L"atdraw";
 				for (int i = 0; i < 32; i++) key += hexChars[dist(gen)];
 				deviceKey = key;
 				WriteSetting();
