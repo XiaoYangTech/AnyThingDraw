@@ -968,17 +968,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 				}
 			}
 
-			{
-				int digitizerStatus = GetSystemMetrics(SM_DIGITIZER);
-				bool hasTouchDevice = (digitizerStatus & NID_READY) && (digitizerStatus & (NID_INTEGRATED_TOUCH | NID_EXTERNAL_TOUCH));
-				if (hasTouchDevice)
-				{
-					if (MainMonitor.MonitorPhyWidth == 0 || MainMonitor.MonitorPhyHeight == 0) setlist.paintDevice = 0, setlist.liftStraighten = true;
-					else if (MainMonitor.MonitorPhyWidth * MainMonitor.MonitorPhyHeight >= 1200) setlist.paintDevice = 0, setlist.liftStraighten = true;
-					else setlist.paintDevice = 1;
-				}
-				else setlist.paintDevice = 1;
-			}
+			// 设备类型/拉直直线不再自动覆盖（尊重用户设置）
 			{
 				HDC screenDC = GetDC(nullptr);
 				double scale = 1.0;

@@ -5753,14 +5753,21 @@ void MouseInteraction()
 						bool eraserLongPress = false;
 						while (1)
 						{
-							ExMessage m = hiex::getmessage_win32(EM_MOUSE, floating_window);
-							if (IsInRect(m.x, m.y, { 192 + 8, floating_windows.height - 156 + 8, 192 + 8 + 80, floating_windows.height - 156 + 8 + 80 }))
+							// 轮询消息（无消息也让长按计时生效，不必等松手）
+							ExMessage m;
+							bool hasMsg = hiex::peekmessage_win32(&m, EM_MOUSE, true, floating_window);
+							if (hasMsg && !IsInRect(m.x, m.y, { 192 + 8, floating_windows.height - 156 + 8, 192 + 8 + 80, floating_windows.height - 156 + 8 + 80 }))
 							{
-								if (setlist.eraserQuickClean && !eraserLongPress && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - eraserPressTime).count() >= 600)
-								{
-									eraserLongPress = true;
-									break;
-								}
+								hiex::flushmessage_win32(EM_MOUSE, floating_window);
+								break;
+							}
+							if (setlist.eraserQuickClean && std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - eraserPressTime).count() >= 600)
+							{
+								eraserLongPress = true;
+								break;
+							}
+							if (hasMsg)
+							{
 								if (!m.lbutton)
 								{
 									state = 1;
@@ -5777,12 +5784,7 @@ void MouseInteraction()
 									break;
 								}
 							}
-							else
-							{
-								hiex::flushmessage_win32(EM_MOUSE, floating_window);
-
-								break;
-							}
+							std::this_thread::sleep_for(std::chrono::milliseconds(15));
 						}
 						hiex::flushmessage_win32(EM_MOUSE, floating_window);
 

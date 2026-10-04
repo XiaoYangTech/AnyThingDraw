@@ -269,40 +269,6 @@ void SettingMain()
 				{
 					IMAGE SettingSign;
 
-					idtLoadImage(&SettingSign, L"PNG", L"Home1_zh-CN", 700 * settingGlobalScale, 215 * settingGlobalScale, true);
-					{
-						int width = settingSign[1].width = SettingSign.getwidth();
-						int height = settingSign[1].height = SettingSign.getheight();
-						DWORD* pMem = GetImageBuffer(&SettingSign);
-
-						unsigned char* data = new unsigned char[width * height * 4];
-						for (int y = 0; y < height; ++y)
-						{
-							for (int x = 0; x < width; ++x)
-							{
-								DWORD color = pMem[y * width + x];
-								unsigned char alpha = (color & 0xFF000000) >> 24;
-								if (alpha != 0)
-								{
-									data[(y * width + x) * 4 + 0] = unsigned char(((color & 0x000000FF) >> 0) * 255 / alpha);
-									data[(y * width + x) * 4 + 1] = unsigned char(((color & 0x0000FF00) >> 8) * 255 / alpha);
-									data[(y * width + x) * 4 + 2] = unsigned char(((color & 0x00FF0000) >> 16) * 255 / alpha);
-								}
-								else
-								{
-									data[(y * width + x) * 4 + 0] = 0;
-									data[(y * width + x) * 4 + 1] = 0;
-									data[(y * width + x) * 4 + 2] = 0;
-								}
-								data[(y * width + x) * 4 + 3] = alpha;
-							}
-						}
-
-						bool ret = LoadTextureFromMemory(data, width, height, &TextureSettingSign[1]);
-						delete[] data;
-
-						IM_ASSERT(ret);
-					}
 
 					idtLoadImage(&SettingSign, L"PNG", L"Home2_zh-CN", 770 * settingGlobalScale, 390 * settingGlobalScale, true);
 					{
@@ -1769,7 +1735,7 @@ void SettingMain()
 						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
 						PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 255, 255, 0));
-						ImGui::BeginChild("软件版本#1", { 750.0f * settingGlobalScale,230.0f * settingGlobalScale }, false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+						ImGui::BeginChild("软件版本#1", { 750.0f * settingGlobalScale,180.0f * settingGlobalScale }, false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 						{
 							ImGui::SetCursorPos({ 0.0f * settingGlobalScale, 0.0f * settingGlobalScale });
@@ -1783,7 +1749,7 @@ void SettingMain()
 							PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 							PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.0f);
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(251, 251, 251, 255));
-							ImGui::BeginChild("版本信息", { 750.0f * settingGlobalScale,200.0f * settingGlobalScale }, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+							ImGui::BeginChild("版本信息", { 750.0f * settingGlobalScale,150.0f * settingGlobalScale }, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 							{
 								ImGui::SetCursorPosY(ImGui::GetCursorPosY());
@@ -1795,8 +1761,7 @@ void SettingMain()
 #ifdef IDT_RELEASE
 									text += L"\n软件构建模式为发布版本";
 #else
-									text += L"
-软件构建模式为非发布调测版本";
+									text += L"\n软件构建模式为非发布调测版本";
 #endif
 								}
 
