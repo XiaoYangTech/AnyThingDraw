@@ -1576,10 +1576,6 @@ void SettingMain()
 								ImFontMain->Scale = 0.6f, PushFontNum++, ImGui::PushFont(ImFontMain);
 								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_TextLink, ImVec4(255 / 255.0f, 255 / 255.0f, 255 / 255.0f, 0.7f));
 								ImGui::TextUnformatted("1125655343");
-									if (false)
-								{
-									ShellExecuteW(0, 0, L"https://qm.qq.com/cgi-bin/qm/qr?k=9V2l83dc0yP4UYeDF-NkTX0o7_TcYqlh&jump_from=webapi&authKey=LsLLUhb1KSzHYbc8k5nCQDqTtRcRUCEE3j+DdR9IgHaF/7JF7LLpY191hsiYEBz6", 0, 0, SW_SHOW);
-								}
 							}
 							{
 								ImGui::SetCursorPos({ Cx + 447.0f * settingGlobalScale,Cy + 460.0f * settingGlobalScale });
