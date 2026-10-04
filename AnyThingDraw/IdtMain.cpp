@@ -968,7 +968,13 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 				}
 			}
 
-			// 设备类型/拉直直线不再自动覆盖（尊重用户设置）
+			// 设备类型自动检测：仅集成触控（一体机/智慧黑板内置屏）才自动配置
+			{
+				int digitizerStatus = GetSystemMetrics(SM_DIGITIZER);
+				bool hasIntegratedTouch = (digitizerStatus & NID_READY) && (digitizerStatus & NID_INTEGRATED_TOUCH);
+				if (hasIntegratedTouch) setlist.paintDevice = 0, setlist.liftStraighten = true;
+				else setlist.paintDevice = 1;
+			}
 			{
 				HDC screenDC = GetDC(nullptr);
 				double scale = 1.0;
