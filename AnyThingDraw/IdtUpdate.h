@@ -113,4 +113,6 @@ extern bool isWindows8OrGreater;
 extern wstring windowsEdition;
 extern IdtAtomic<int> downloadLine;
 
+extern wstring latestDownloadUrl;
+
 void AutomaticUpdate();

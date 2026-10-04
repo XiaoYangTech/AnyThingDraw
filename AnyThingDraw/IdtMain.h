@@ -192,6 +192,7 @@ extern wstring editionDate;
 extern wstring editionChannel;
 
 extern wstring userId;
+extern wstring deviceKey;
 extern wstring globalPath;
 extern wstring pluginPath;
 

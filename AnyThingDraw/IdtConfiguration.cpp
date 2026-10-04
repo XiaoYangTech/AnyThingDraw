@@ -120,6 +120,12 @@ bool ReadSetting()
 
 		if (setlistVal.isMember("StartUp") && setlistVal["StartUp"].isBool())
 			setlist.startUp = setlistVal["StartUp"].asBool();
+
+		if (setlistVal.isMember("BasicInfo") && setlistVal["BasicInfo"].isObject())
+		{
+			if (setlistVal["BasicInfo"].isMember("DeviceKey") && setlistVal["BasicInfo"]["DeviceKey"].isString())
+				deviceKey = utf8ToUtf16(setlistVal["BasicInfo"]["DeviceKey"].asString());
+		}
 		if (setlistVal.isMember("SettingGlobalScale") && setlistVal["SettingGlobalScale"].isDouble())
 			setlist.settingGlobalScale = setlistVal["SettingGlobalScale"].asDouble();
 
@@ -448,6 +454,7 @@ bool WriteSetting()
 		}
 		{
 			setlistVal["BasicInfo"]["UserID"] = Json::Value(utf16ToUtf8(userId));
+			setlistVal["BasicInfo"]["DeviceKey"] = Json::Value(utf16ToUtf8(deviceKey));
 			setlistVal["BasicInfo"]["Edition"] = Json::Value(utf16ToUtf8(editionDate));
 		}
 

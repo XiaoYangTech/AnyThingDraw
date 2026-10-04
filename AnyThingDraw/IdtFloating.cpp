@@ -536,7 +536,6 @@ void DrawScreen()
 
 			idtLoadImage(&sign, L"PNG", L"sign1", 30, 30, true);
 
-			idtLoadImage(&skin[2], L"PNG", L"skin1-2");
 
 		}
 

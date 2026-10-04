@@ -63,6 +63,34 @@ string GetRefererInfo()
 	return ret;
 }
 
+std::wstring latestDownloadUrl;
+
+static bool IsNewerVersion(const std::wstring& latest, const std::wstring& current)
+{
+	auto splitVer = [](const std::wstring& v) -> std::vector<long long>
+		{
+			std::vector<long long> out;
+			std::wstring cur;
+			std::wstring s = v;
+			if (!s.empty() && (s[0] == L'v' || s[0] == L'V')) s = s.substr(1);
+			for (wchar_t c : s)
+			{
+				if (c >= L'0' && c <= L'9') cur += c;
+				else if (!cur.empty()) { try { out.push_back(std::stoll(cur)); } catch (...) {} cur.clear(); }
+			}
+			if (!cur.empty()) { try { out.push_back(std::stoll(cur)); } catch (...) {} }
+			return out;
+		};
+	auto av = splitVer(latest), bv = splitVer(current);
+	for (size_t i = 0; i < max(av.size(), bv.size()); i++)
+	{
+		long long x = i < av.size() ? av[i] : 0, y = i < bv.size() ? bv[i] : 0;
+		if (x > y) return true;
+		if (x < y) return false;
+	}
+	return false;
+}
+
 EditionInfoClass GetEditionInfo(string channel, string arch)
 {
 	/*
@@ -185,6 +213,9 @@ EditionInfoClass GetEditionInfo(string channel, string arch)
 			retEditionInfo.channel = channel;
 			retEditionInfo.errorCode = 200;
 		}
+
+	if (retEditionInfo.errorCode == 200 && retEditionInfo.path_size > 0 && !retEditionInfo.path[0].empty())
+		latestDownloadUrl = utf8ToUtf16(retEditionInfo.path[0]);
 	}
 	else
 	{
@@ -371,161 +402,17 @@ updateStart:
 		}
 
 		//下载最新版本
-		if (state && editionInfo.editionDate != L"" && ((editionInfo.editionDate > editionDate && GetUpdateTargetSnapshot().enableAutoUpdate) || mandatoryUpdate))
+		if (state && editionInfo.editionDate != L"" && ((IsNewerVersion(editionInfo.editionDate, editionDate) && GetUpdateTargetSnapshot().enableAutoUpdate) || mandatoryUpdate))
 		{
-			// 无法使用自动更新以及自动修复的情况
-			if (editionInfo.isAnyThingDraw3 && !mandatoryUpdate)
-			{
-				if (!isWindows8OrGreater)
-				{
-					AutomaticUpdateState = UpdateLimit;
-					state = false;
-				}
-				else
-				{
-					AutomaticUpdateState = UpdateAnyThingDraw3;
-					state = false;
-				}
-			}
-			else
-			{
-				update = true;
-				if (_waccess((globalPath + L"installer\\update.json").c_str(), 4) == 0 && !mandatoryUpdate)
-				{
-					wstring tedition, tpath;
-					string thash_md5, thash_sha256;
-					string tchannel, tarch;
-
-					Json::Reader reader;
-					Json::Value root;
-
-					ifstream readjson;
-					readjson.imbue(locale("zh_CN.UTF8"));
-					readjson.open((globalPath + L"installer\\update.json").c_str());
-
-					bool fileDamage = false;
-					if (reader.parse(readjson, root))
-					{
-						if (root.isMember("edition")) tedition = utf8ToUtf16(root["edition"].asString());
-						else fileDamage = true;
-						if (root.isMember("path")) tpath = utf8ToUtf16(root["path"].asString());
-						else fileDamage = true;
-
-						if (root.isMember("hash"))
-						{
-							if (root["hash"].isMember("md5")) thash_md5 = root["hash"]["md5"].asString();
-							else fileDamage = true;
-							if (root["hash"].isMember("sha256")) thash_sha256 = root["hash"]["sha256"].asString();
-							else fileDamage = true;
-						}
-						else fileDamage = true;
-
-						// 通道和架构确定
-						if (root.isMember("channel")) tchannel = root["channel"].asString();
-						else fileDamage = true;
-						if (root.isMember("arch")) tarch = root["arch"].asString();
-						else fileDamage = true;
-					}
-					readjson.close();
-
-					if (!fileDamage)
-					{
-						string hash_md5, hash_sha256;
-						{
-							hashwrapper* myWrapper = new md5wrapper();
-							hash_md5 = myWrapper->getHashFromFileW(globalPath + tpath);
-							delete myWrapper;
-						}
-						{
-							hashwrapper* myWrapper = new sha256wrapper();
-							hash_sha256 = myWrapper->getHashFromFileW(globalPath + tpath);
-							delete myWrapper;
-						}
-
-						if (tedition == editionInfo.editionDate && _waccess((globalPath + tpath).c_str(), 0) == 0 && hash_md5 == thash_md5 && hash_sha256 == thash_sha256 && editionInfo.channel == tchannel && updateArch == tarch)
-						{
-							if (!GetUpdateTargetSnapshot().enableAutoUpdate)
-							{
-								if (_waccess((globalPath + L"installer").c_str(), 0) == 0)
-								{
-									error_code ec;
-									filesystem::remove_all(globalPath + L"installer", ec);
-								}
-							}
-							else
-							{
-								update = false;
-								AutomaticUpdateState = UpdateRestart;
-							}
-						}
-					}
-				}
-
-				if (update)
-				{
-					downloadLine = 1;
-					AutomaticUpdateState = UpdateDownloading;
-
-					against = true;
-					bool hasUpdateNew = false;
-					bool updateTargetChanged = false;
-					for (int i = 0; i < editionInfo.path_size; i++)
-					{
-						downloadLine = i + 1;
-						AutomaticUpdateState = UpdateDownloading;
-
-						AutomaticUpdateState = DownloadNewProgram(&downloadNewProgramState, editionInfo, editionInfo.path[i], updateArch);
-
-						if (AutomaticUpdateState == UpdateRestart)
-						{
-							UpdateTargetSnapshot currentUpdateTarget = GetUpdateTargetSnapshot();
-							if (currentUpdateTarget.channel != editionInfo.channel || currentUpdateTarget.architecture != updateArch)
-							{
-								if (_waccess((globalPath + L"installer").c_str(), 0) == 0)
-								{
-									error_code ec;
-									filesystem::remove_all(globalPath + L"installer", ec);
-								}
-
-								updateTargetChanged = true;
-								break;
-							}
-
-							against = false;
-
-							if (mandatoryUpdate)
-							{
-								mandatoryUpdate = false;
-								RestartProgram();
-							}
-							break;
-						}
-						else if (AutomaticUpdateState == UpdateNew && !mandatoryUpdate)
-						{
-							if (_waccess((globalPath + L"installer").c_str(), 0) == 0)
-							{
-								error_code ec;
-								filesystem::remove_all(globalPath + L"installer", ec);
-							}
-
-							hasUpdateNew = true;
-							break;
-						}
-					}
-
-					if (updateTargetChanged)
-					{
-						AutomaticUpdateState = UpdateObtainInformation;
-						continue;
-					}
-					if (hasUpdateNew) continue;
-				}
-			}
+			// 亿方智云模式：无直链安装包，提示新版本，由用户点击"手动更新"打开下载页
+			AutomaticUpdateState = UpdateNew;
+			state = false;
 		}
+
 		else if (state && editionInfo.editionDate != L"")
 		{
-			if (editionInfo.editionDate > editionDate) AutomaticUpdateState = UpdateNew;
-			else if (editionInfo.editionDate < editionDate) AutomaticUpdateState = UpdateNewer;
+			if (IsNewerVersion(editionInfo.editionDate, editionDate)) AutomaticUpdateState = UpdateNew;
+			else if (IsNewerVersion(editionDate, editionInfo.editionDate)) AutomaticUpdateState = UpdateNewer;
 			else AutomaticUpdateState = UpdateLatest;
 		}
 

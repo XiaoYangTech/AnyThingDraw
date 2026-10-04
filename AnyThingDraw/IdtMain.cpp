@@ -35,19 +35,22 @@ import AnyThingDraw.Thread.Status;
 #include "IdtText.h"
 #include "IdtTime.h"
 #include "IdtUpdate.h"
+#include "IdtNet.h"
 #include "IdtWindow.h"
 #include "AnyThingDraw/Other/IdtGesture.h"
 #include "AnyThingDraw/Load/IdtFontLoad.h"
 #include "Launch/IdtLaunchState.h"
 #include "SuperTop/IdtSuperTop.h"
 
+#include <random>
 #include <lm.h>
 #include <shellscalingapi.h>
 #include <shlobj.h>
 #pragma comment(lib, "netapi32.lib")
 
 wstring buildTime = __DATE__ L" " __TIME__;		// 构建时间
-wstring editionDate = L"1.0.0";				// 程序发布日期
+wstring editionDate = L"1.0.0";
+wstring deviceKey;				// 程序发布日期
 wstring editionChannel = L"LTS";				// 程序发布通道
 
 wstring userId;									// 用户GUID
@@ -1007,6 +1010,21 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			WriteSetting();
 		}
 
+		// 设备标识（亿方智云上报用，首次生成后持久化）
+		{
+			if (deviceKey.empty())
+			{
+				std::random_device rd;
+				std::mt19937_64 gen(rd());
+				std::uniform_int_distribution<int> dist(0, 15);
+				const wchar_t* hexChars = L"0123456789abcdef";
+				wstring key = L"le_";
+				for (int i = 0; i < 32; i++) key += hexChars[dist(gen)];
+				deviceKey = key;
+				WriteSetting();
+			}
+		}
+
 		// 初次读取配置后的操作
 		{
 			// 开机自启设定
@@ -1074,6 +1092,21 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
 	#ifdef IDT_RELEASE
 		thread(AutomaticUpdate).detach();
+
+	// 设备上报（亿方智云，每 8 分钟一次，失败静默）
+	thread([]()
+		{
+			wchar_t computerName[256] = { 0 };
+			DWORD size = 256;
+			GetComputerNameW(computerName, &size);
+			std::string deviceName = utf16ToUtf8(computerName);
+			std::string deviceKeyUtf8 = utf16ToUtf8(deviceKey);
+			for (; !offSignal;)
+			{
+				ReportDevicePing(deviceKeyUtf8, deviceName);
+				for (int i = 0; i < 480 && !offSignal; i++) this_thread::sleep_for(chrono::seconds(1));
+			}
+		}).detach();
 	#endif
 	}
 
