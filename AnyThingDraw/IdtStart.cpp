@@ -1,10 +1,5 @@
 ﻿#include "IdtStart.h"
 
-#include "IdtDisplayManagement.h"
-#include "IdtUpdate.h"
-
-
-// 分辨率不合适、内存不合适、系统低于win10
 
 
 IdtSysVersionStruct GetWindowsVersion()
