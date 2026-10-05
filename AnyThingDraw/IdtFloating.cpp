@@ -27,13 +27,11 @@ import AnyThingDraw.Thread.Status;
 floating_windowsStruct floating_windows;
 
 IMAGE floating_icon[35], sign;
-IMAGE skin[5];
 
 double state;
 double target_status;
 
 bool reserve_drawpad = false;
-bool smallcard_refresh = true;
 
 
 //UI 控件

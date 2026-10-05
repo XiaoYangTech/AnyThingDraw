@@ -50,8 +50,8 @@ import AnyThingDraw.Thread.Status;
 
 wstring buildTime = __DATE__ L" " __TIME__;		// 构建时间
 wstring editionDate = L"1.0.0";
-wstring deviceKey;				// 程序发布日期
 wstring editionChannel = L"LTS";				// 程序发布通道
+wstring deviceKey;				// 程序发布日期
 
 wstring userId;									// 用户GUID
 wstring globalPath;								// 程序当前路径
@@ -841,8 +841,6 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 		//图像DPI转化
 		{
 			alpha_drawpad.Resize(GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
-			tester.Resize(GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
-			pptdrawpad.Resize(GetSystemMetrics(SM_CXSCREEN), GetSystemMetrics(SM_CYSCREEN));
 		}
 
 		IDTLogger->info("[主线程][IdtMain] DPI初始化完成");
@@ -1027,9 +1025,6 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			{
 				bool isStartUp = QueryStartupState(GetCurrentExePath(), L"$AnyThingDraw");
 				if (isStartUp != setlist.startUp) SetStartupState(setlist.startUp, GetCurrentExePath(), L"$AnyThingDraw");
-			}
-			// 皮肤设定
-			{
 			}
 			// 崩溃选项设定
 			CrashHandler::SetFlag(setlist.regularSetting.teachingSafetyMode);

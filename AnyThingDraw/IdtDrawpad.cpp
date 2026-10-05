@@ -25,11 +25,8 @@
 #include <propvarutil.h>
 #pragma comment(lib, "propsys.lib")
 
-bool main_open;
 bool FirstDraw = true;
-bool IdtHotkey;
 
-StrokeImageClass strokeImage;
 
 shared_mutex StrokeImageListSm;
 vector<StrokeImageClass*> StrokeImageList;

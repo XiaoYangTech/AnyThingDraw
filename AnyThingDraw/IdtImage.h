@@ -3,7 +3,6 @@
 
 //drawpad画笔
 extern IMAGE alpha_drawpad; //临时画板
-extern IMAGE putout; //主画板上叠加的控件内容
 extern IMAGE tester; //图形绘制画板
 extern IMAGE pptdrawpad; //PPT控件画板
 

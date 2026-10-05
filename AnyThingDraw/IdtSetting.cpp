@@ -48,7 +48,6 @@ struct
 	int height;
 } settingSign[11];
 PDIRECT3DTEXTURE9 TextureSettingSign[11];
-int SettingMainMode = 1;
 
 int SettingWindowX;
 int SettingWindowY;

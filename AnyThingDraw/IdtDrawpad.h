@@ -1,9 +1,7 @@
 ﻿#pragma once
 #include "IdtMain.h"
 
-extern bool main_open;
 extern bool FirstDraw;
-extern bool IdtHotkey;
 
 class StrokeImageClass
 {
@@ -29,7 +27,6 @@ public:
 	int endMode; // 1 绘制到画布上 2 不绘制到画布上
 	int alpha;
 };
-extern StrokeImageClass strokeImage;
 
 extern shared_mutex StrokeImageListSm;
 extern vector<StrokeImageClass*> StrokeImageList;

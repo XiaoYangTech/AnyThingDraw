@@ -24,3 +24,10 @@ Debug/
 *.ipdb
 *.obj
 *.tlog
+
+# 开发残留
+*.aps
+*.user
+RCa*
+__pycache__/
+*.pyc

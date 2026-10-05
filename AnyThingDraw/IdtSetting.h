@@ -11,7 +11,6 @@
 
 extern WNDCLASSEXW ImGuiWc;
 extern PDIRECT3DTEXTURE9 TextureSettingSign[11];
-extern int SettingMainMode;
 
 void SettingWindowBegin();
 void SettingMain();

@@ -11,13 +11,11 @@ struct floating_windowsStruct
 extern floating_windowsStruct floating_windows;
 
 extern IMAGE floating_icon[35], sign;
-extern IMAGE skin[5];
 
 extern double state;
 extern double target_status;
 
 extern bool reserve_drawpad;
-extern bool smallcard_refresh;
 
 //UI 控件
 
