@@ -40,34 +40,6 @@ void GetEdition()
 	}
 }
 
-void StartForAnyThingDraw()
-{
-	thread(GetEdition).detach();
-
-	// 获取基础信息
-	{
-		// 主显示器信息
-		hardwareInfo.screenWidth = MainMonitor.MonitorWidth;
-		hardwareInfo.screenHeight = MainMonitor.MonitorHeight;
-		hardwareInfo.screenPhyWidth = MainMonitor.MonitorPhyWidth;
-		hardwareInfo.screenPhyHeight = MainMonitor.MonitorPhyHeight;
-		// 屏幕是横向还是纵向
-		hardwareInfo.screenOrientation = MainMonitor.displayOrientation;
-
-		// 内存大小
-		MEMORYSTATUSEX memoryStatus;
-		memoryStatus.dwLength = sizeof(memoryStatus);
-		GlobalMemoryStatusEx(&memoryStatus);
-
-		// 系统是否高于或是 Windows10
-		hardwareInfo.isWindows10OrGreater = (GetWindowsVersion().majorVersion >= 10);
-
-		// 是否拥有触摸设备
-		int digitizerStatus = GetSystemMetrics(SM_DIGITIZER);
-		hardwareInfo.hasTouchDevice = (digitizerStatus & NID_READY) && (digitizerStatus & (NID_INTEGRATED_TOUCH | NID_EXTERNAL_TOUCH));
-	}
-}
-
 IdtSysVersionStruct GetWindowsVersion()
 {
 	IdtSysVersionStruct ret = { 0,0,0 };

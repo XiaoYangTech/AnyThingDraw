@@ -997,8 +997,6 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			{
 				IDTLogger->warn("[主线程][IdtMain] 配置信息不存在");
 
-				// 联控测试：start 界面
-				// StartForAnyThingDraw();
 			}
 			else ReadSetting();
 			WriteSetting();

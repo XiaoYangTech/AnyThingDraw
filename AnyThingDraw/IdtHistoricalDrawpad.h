@@ -10,7 +10,6 @@ extern int reference_record_pointer, practical_total_record_pointer;
 extern Json::Value record_value;
 
 //载入记录
-void LoadDrawpad();
 //保存图像到指定目录
 void SaveScreenShot(IMAGE img, bool record_pointer_add);
 

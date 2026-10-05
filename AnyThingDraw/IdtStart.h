@@ -4,7 +4,6 @@
 // -------------------------
 // UI 对象
 
-extern bool StartUiAnimationEnable;
 
 class StartUiWidgetValue
 {
@@ -145,7 +144,6 @@ extern StartUiWidgetStateEnum startUiWidgetState;
 // -------------------------
 // Start 主项
 
-void StartForAnyThingDraw();
 
 // --------------------------------------------------
 // 其他杂项
