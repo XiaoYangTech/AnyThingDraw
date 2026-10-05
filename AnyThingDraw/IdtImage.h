@@ -9,7 +9,6 @@ extern IMAGE pptdrawpad; //PPT控件画板
 extern int recall_image_recond, recall_image_reference;
 extern shared_mutex RecallImageManipulatedSm;
 extern chrono::high_resolution_clock::time_point RecallImageManipulated;
-extern tm RecallImageTm;
 struct RecallStruct
 {
 	IMAGE img;
@@ -24,8 +23,6 @@ extern deque<RecallStruct> RecallImage;//撤回栈
 extern IMAGE background;
 extern Graphics graphics;
 
-Bitmap* IMAGEToBitmap(IMAGE* easyXImage);
-bool ImgCpy(IMAGE* tag, IMAGE* src);
 
 extern shared_mutex loadImageSm;
 void idtLoadImage(IMAGE* pDstImg, LPCTSTR pImgFile, int nWidth = 0, int nHeight = 0, bool bResize = false);

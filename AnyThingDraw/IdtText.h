@@ -11,9 +11,7 @@ wstring utf8ToUtf16(const string& input);
 string utf16ToUtf8(const wstring& input);
 
 wstring bstrToWstring(const _bstr_t& bstr);
-_bstr_t wstringToBstr(const wstring& str);
 
-string StringToUrlencode(const string& str);
 
 class CustomSplit
 {

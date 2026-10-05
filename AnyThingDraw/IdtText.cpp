@@ -37,29 +37,6 @@ wstring bstrToWstring(const _bstr_t& bstr)
 {
 	return static_cast<wchar_t*>(bstr);
 }
-_bstr_t wstringToBstr(const wstring& str)
-{
-	return _bstr_t(str.c_str());
-}
-
-string StringToUrlencode(const string& str)
-{
-	ostringstream escaped;
-	escaped.fill('0');
-	escaped << hex;
-
-	for (unsigned char c : str)
-	{
-		if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') escaped << c;
-		else
-		{
-			escaped << '%' << uppercase << setw(2) << int(c);
-			escaped << nouppercase;
-		}
-	}
-	return escaped.str();
-}
-
 vector<wstring> CustomSplit::Run(const wstring& input, wchar_t custom_sep)
 {
 	vector<wstring> result;

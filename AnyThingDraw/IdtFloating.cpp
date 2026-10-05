@@ -123,18 +123,6 @@ IMAGE DrawHSVWheel(int r, int z, int angle)
 	return ret;
 }
 //时钟皮肤
-pair<double, double> GetPointOnCircle(double x, double y, double r, double angle)
-{
-	// 将角度转换为弧度
-	double radian = (angle * 3.14159265358979323846) / 180.0;
-
-	// 计算圆上点的坐标
-	double px = x + r * sin(radian);
-	double py = y - r * cos(radian);
-
-	return make_pair(px + 0.5, py + 0.5);
-}
-
 int SeekBar(ExMessage m)
 {
 	if (!IdtInputs::IsKeyBoardDown(VK_LBUTTON)) return 0;

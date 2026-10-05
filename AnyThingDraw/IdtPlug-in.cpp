@@ -2390,7 +2390,6 @@ void PptInfo()
 			// 设置控件归位
 			PptComReadSettingPositionOnly();
 
-			FreezePPT = false;
 			Initialization = false;
 		}
 		else if (Initialization)

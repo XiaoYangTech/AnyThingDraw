@@ -82,51 +82,7 @@ void ChangeColor(IMAGE& img, COLORREF color)
 	}
 }
 // 计算两个COLORREF颜色之间的加权距离
-double color_distance(COLORREF c1, COLORREF c2) {
-	// 提取各个颜色分量
-	int r1 = GetRValue(c1);
-	int g1 = GetGValue(c1);
-	int b1 = GetBValue(c1);
-	int r2 = GetRValue(c2);
-	int g2 = GetGValue(c2);
-	int b2 = GetBValue(c2);
-
-	// 设置各个分量的权重
-	double wr = 0.3;
-	double wg = 0.59;
-	double wb = 0.11;
-
-	// 计算加权平方和
-	double sum = wr * (r1 - r2) * (r1 - r2) +
-		wg * (g1 - g2) * (g1 - g2) +
-		wb * (b1 - b2) * (b1 - b2);
-
-	// 开平方并返回
-	return sqrt(sum);
-}
 // 定义反色函数
-COLORREF InvertColor(COLORREF color, bool alpha_enable)
-{
-	// 提取颜色分量
-	BYTE red = GetRValue(color);
-	BYTE green = GetGValue(color);
-	BYTE blue = GetBValue(color);
-	BYTE alpha;
-	if (alpha_enable) alpha = (color >> 24) & 0xff;
-	else alpha = 255;
-
-	// 反色分量
-	red = 255 - red;
-	green = 255 - green;
-	blue = 255 - blue;
-
-	// 合并颜色分量和透明度
-	COLORREF inverted = red | (green << 8) | (blue << 16) | (alpha << 24);
-
-	// 返回反色
-	return inverted;
-}
-
 //保存图像到本地
 bool saveImageToPNG(IMAGE img, const wstring& filePath, bool alpha, int compression_level)
 {
@@ -208,29 +164,6 @@ bool CompareImagesWithBuffer(IMAGE* img1, IMAGE* img2)
 	return memcmp(pBuf1, pBuf2, dataSize) == 0;
 }
 //设置图像必须不拥有全透明像素（将所有全透明像素点透明度设置为1）
-void SetAlphaToOne(IMAGE* pImg) // pImg是绘图设备指针
-{
-	// 获取图像缓冲区指针
-	DWORD* pBuffer = GetImageBuffer(pImg);
-	// 获取图像宽度和高度
-	int width = pImg->getwidth();
-	int height = pImg->getheight();
-	// 遍历每个点
-	for (int i = 0; i < width * height; i++)
-	{
-		// 获取当前点的颜色值（ARGB格式）
-		DWORD color = pBuffer[i];
-		// 如果透明度为0，则将其设为1
-		if ((color >> 24) == 0)
-		{
-			// 将最高8位设为1，并保持其他位不变
-			color = (color & 0x00FFFFFF) | 0x01000000;
-			// 将修改后的颜色值写回到图像缓冲区
-			pBuffer[i] = color;
-		}
-	}
-}
-
 double EuclideanDistance(POINT a, POINT b)
 {
 	return std::sqrt(std::pow(a.x - b.x, 2) + std::pow(a.y - b.y, 2));

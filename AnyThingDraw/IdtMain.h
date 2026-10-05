@@ -189,7 +189,6 @@ struct formatter<IdtAtomic<IdtAtomicT>, CharT> : formatter<IdtAtomicT, CharT>
 
 extern wstring buildTime;
 extern wstring editionDate;
-extern wstring editionChannel;
 
 extern wstring userId;
 extern wstring deviceKey;

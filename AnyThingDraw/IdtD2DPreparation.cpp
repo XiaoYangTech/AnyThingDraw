@@ -26,13 +26,6 @@ void D2DStarup()
 	DWriteCreateFactory(DWRITE_FACTORY_TYPE_SHARED, __uuidof(IDWriteFactory), reinterpret_cast<IUnknown**>(&tmpWriteFactory));
 	D2DTextFactory.Attach(tmpWriteFactory);
 }
-void D2DShutdown()
-{
-	DxObjectSafeRelease(&D2DFontCollection);
-	DxObjectSafeRelease(&D2DTextFactory);
-	DxObjectSafeRelease(&D2DFactory);
-}
-
 D2D1::ColorF ConvertToD2DColor(COLORREF Color, bool ReserveAlpha)
 {
 	return D2D1::ColorF(

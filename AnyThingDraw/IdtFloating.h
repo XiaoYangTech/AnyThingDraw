@@ -39,7 +39,6 @@ map<wstring, UIControlColorStruct>& map<wstring, UIControlColorStruct>::operator
 Color ColorFromHSV(float hue, float saturation, float value);
 IMAGE DrawHSVWheel(int r, int z = 0, int angle = 0);
 //时钟表盘
-pair<double, double> GetPointOnCircle(double x, double y, double r, double angle);
 
 //绘制屏幕
 void DrawScreen();

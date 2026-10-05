@@ -9,12 +9,9 @@ extern HWND ppt_window; //PPT控件窗口
 extern HWND freeze_window; //定格背景窗口
 extern HWND setting_window; //程序调测窗口
 
-extern bool FreezePPT;
 extern HWND ppt_show;
 extern wstring ppt_title, ppt_software;
-extern map<wstring, bool> ppt_title_recond;
 
-HWND GetLastFocusWindow();
 wstring GetWindowText(HWND hWnd);
 
 struct IdtWindowsIsVisibleStruct

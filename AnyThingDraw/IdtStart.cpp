@@ -3,42 +3,9 @@
 #include "IdtDisplayManagement.h"
 #include "IdtUpdate.h"
 
-struct
-{
-	// 主显示器信息
-	int screenWidth;
-	int screenHeight;
-	int screenPhyWidth;
-	int screenPhyHeight;
-	// 屏幕是横向还是纵向
-	int screenOrientation;
-	// 内存大小
-	int ramSize;
-	// 系统是否大于等于 Windows10
-	bool isWindows10OrGreater;
-	// 系统是否含有触摸设备
-	bool hasTouchDevice;
-}hardwareInfo;
 
 // 分辨率不合适、内存不合适、系统低于win10
 
-class EditionStateStruct
-{
-public:
-	bool result;
-	wstring editionDate;
-} editionState;
-void GetEdition()
-{
-	editionState.result = false, editionState.editionDate = L"";
-
-	EditionInfoClass editionInfo = GetEditionInfo("LTS", "");
-	if (editionInfo.errorCode == 200)
-	{
-		editionState.editionDate = editionInfo.editionDate;
-		editionState.result = true;
-	}
-}
 
 IdtSysVersionStruct GetWindowsVersion()
 {
@@ -65,11 +32,4 @@ IdtSysVersionStruct GetWindowsVersion()
 	}
 
 	return ret;
-}
-bool hasTouchDevice()
-{
-	// 检查是否有触摸支持或者手写笔支持
-	int digitizerStatus = GetSystemMetrics(SM_DIGITIZER);
-	bool hasTouchInput = (digitizerStatus & NID_READY) && (digitizerStatus & (NID_INTEGRATED_TOUCH | NID_EXTERNAL_TOUCH));
-	return hasTouchInput;
 }

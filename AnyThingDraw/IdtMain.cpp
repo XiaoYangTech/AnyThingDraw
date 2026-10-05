@@ -50,7 +50,6 @@ import AnyThingDraw.Thread.Status;
 
 wstring buildTime = __DATE__ L" " __TIME__;		// 构建时间
 wstring editionDate = L"1.0.0";
-wstring editionChannel = L"LTS";				// 程序发布通道
 wstring deviceKey;				// 程序发布日期
 
 wstring userId;									// 用户GUID
@@ -970,7 +969,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			{
 				int digitizerStatus = GetSystemMetrics(SM_DIGITIZER);
 				bool hasIntegratedTouch = (digitizerStatus & NID_READY) && (digitizerStatus & NID_INTEGRATED_TOUCH);
-				if (hasIntegratedTouch) setlist.paintDevice = 0, setlist.liftStraighten = true;
+				if (hasIntegratedTouch) setlist.paintDevice = 0; // 抬笔拉直不再自动开启
 				else setlist.paintDevice = 1;
 			}
 			{

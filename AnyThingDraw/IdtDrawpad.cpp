@@ -27,7 +27,6 @@
 
 bool FirstDraw = true;
 
-
 shared_mutex StrokeImageListSm;
 vector<StrokeImageClass*> StrokeImageList;
 
@@ -1473,7 +1472,6 @@ void DrawpadDrawing()
 					if (setlist.regularSetting.avoidFullScreen)
 						SetWindowPos(drawpad_window, NULL, MainMonitor.rcMonitor.left, MainMonitor.rcMonitor.top, MainMonitor.MonitorWidth, MainMonitor.MonitorHeight - 1, SWP_NOZORDER | SWP_NOACTIVATE);
 				}
-				bool saveImage = true;
 
 				IMAGE empty_drawpad = CreateImageColor(drawpad.getwidth(), drawpad.getheight(), RGBA(0, 0, 0, 0), true);
 				if (reference_record_pointer == current_record_pointer && !CompareImagesWithBuffer(&empty_drawpad, &drawpad))
@@ -1523,26 +1521,9 @@ void DrawpadDrawing()
 
 				if (!RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
 				{
-					if (PptInfoStateBuffer.TotalPage != -1)
-					{
-						if (PptImg.IsSaved[PptInfoStateBuffer.CurrentPage] && CompareImagesWithBuffer(&drawpad, &PptImg.Image[PptInfoStateBuffer.CurrentPage]))
-							saveImage = false;
-					}
-					if (recall_image_reference <= recall_image_recond && recall_image_recond % 10 == 0 && recall_image_recond >= 20)
-						saveImage = false;
 
 					std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
 					std::unique_lock<std::shared_mutex> LockExtremePointSm(ExtremePointSm);
-
-					if (saveImage)
-					{
-						if (offSignal) SaveScreenShot(RecallImage.back().img, true);
-						else
-						{
-							thread SaveScreenShot_thread(SaveScreenShot, RecallImage.back().img, true);
-							SaveScreenShot_thread.detach();
-						}
-					}
 
 					extreme_point.clear();
 					RecallImage.back().type = 1;
@@ -1677,11 +1658,6 @@ void DrawpadDrawing()
 										bool save_recond = false;
 										if (recall_image_reference > recall_image_recond) recall_image_recond++;
 										else recall_image_recond = recall_image_reference = recall_image_reference + 1, save_recond = true;
-										if (recall_image_recond % 10 == 0 && save_recond && recall_image_recond >= 20)
-										{
-											thread SaveScreenShot_thread(SaveScreenShot, RecallImage[0].img, false);
-											SaveScreenShot_thread.detach();
-										}
 									}
 
 									std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
@@ -1711,12 +1687,6 @@ void DrawpadDrawing()
 							{
 								std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
 								std::unique_lock<std::shared_mutex> LockExtremePointSm(ExtremePointSm);
-
-								if (!PptImg.IsSaved[PptInfoStateBuffer.CurrentPage] || !CompareImagesWithBuffer(&RecallImage.back().img, &PptImg.Image[PptInfoStateBuffer.CurrentPage]))
-								{
-									thread SaveScreenShot_thread(SaveScreenShot, RecallImage.back().img, true);
-									SaveScreenShot_thread.detach();
-								}
 
 								PptImg.IsSave = true;
 								PptImg.IsSaved[PptInfoStateBuffer.CurrentPage] = true;
@@ -1824,11 +1794,6 @@ void DrawpadDrawing()
 								bool save_recond = false;
 								if (recall_image_reference > recall_image_recond) recall_image_recond++;
 								else recall_image_recond = recall_image_reference = recall_image_reference + 1, save_recond = true;
-								if (recall_image_recond % 10 == 0 && save_recond && recall_image_recond >= 20)
-								{
-									thread SaveScreenShot_thread(SaveScreenShot, RecallImage[0].img, false);
-									SaveScreenShot_thread.detach();
-								}
 							}
 
 							std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
@@ -1858,12 +1823,6 @@ void DrawpadDrawing()
 					{
 						std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
 						std::unique_lock<std::shared_mutex> LockExtremePointSm(ExtremePointSm);
-
-						if (!PptImg.IsSaved[PptInfoStateBuffer.CurrentPage] || !CompareImagesWithBuffer(&RecallImage.back().img, &PptImg.Image[PptInfoStateBuffer.CurrentPage]))
-						{
-							thread SaveScreenShot_thread(SaveScreenShot, RecallImage.back().img, true);
-							SaveScreenShot_thread.detach();
-						}
 
 						PptImg.IsSave = true;
 						PptImg.IsSaved[PptInfoStateBuffer.CurrentPage] = true;
@@ -1965,12 +1924,6 @@ void DrawpadDrawing()
 						if (recall_image_reference > recall_image_recond) recall_image_recond++;
 						else recall_image_recond = recall_image_reference = recall_image_reference + 1, save_recond = true;
 
-						if (recall_image_recond % 10 == 0 && save_recond && recall_image_recond >= 20)
-						{
-							thread SaveScreenShot_thread(SaveScreenShot, RecallImage[0].img, false);
-							SaveScreenShot_thread.detach();
-						}
-
 						std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
 						std::unique_lock<std::shared_mutex> LockExtremePointSm(ExtremePointSm);
 
@@ -2028,11 +1981,6 @@ void DrawpadDrawing()
 						}
 						if (save)
 						{
-							if (recall_image_recond % 10 == 0 && save_recond && recall_image_recond >= 20)
-							{
-								thread SaveScreenShot_thread(SaveScreenShot, RecallImage[0].img, false);
-								SaveScreenShot_thread.detach();
-							}
 
 							std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
 							std::unique_lock<std::shared_mutex> LockExtremePointSm(ExtremePointSm);
