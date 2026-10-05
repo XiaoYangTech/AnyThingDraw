@@ -267,7 +267,6 @@
     <ClInclude Include="IdtSetting.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="IdtSysNotifications.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="IdtGuid.h">
@@ -279,7 +278,6 @@
     <ClInclude Include="IdtState.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="IdtI18n.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="IdtStart.h">
@@ -732,7 +730,6 @@
     <ClInclude Include="additional\imgui\imgui_toggle_renderer.h">
       <Filter>头文件\Additional\Imgui</Filter>
     </ClInclude>
-    <ClInclude Include="additional\ft2build.h">
       <Filter>头文件\Additional</Filter>
     </ClInclude>
     <ClInclude Include="additional\imgui\imstb_rectpack.h">
@@ -911,7 +908,6 @@
     <ClCompile Include="IdtConfiguration.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="IdtSysNotifications.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="IdtGuid.cpp">
@@ -923,7 +919,6 @@
     <ClCompile Include="IdtState.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="IdtI18n.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="IdtStart.cpp">
@@ -1013,7 +1008,6 @@
     <ClCompile Include="ExtraInclude.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="IdtDrawpadList.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Launch\IdtLaunchState.cpp">
@@ -1044,19 +1038,15 @@
     </ResourceCompile>
   </ItemGroup>
   <ItemGroup>
-    <Image Include="src\endshow.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\left.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\right.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\write.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\sign.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\rubber.png">
@@ -1101,55 +1091,42 @@
     <Image Include="src\icon.ico">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\weather\weather3.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\weather\png00001.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\tick.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\sign1.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\gwxq.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\option.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\bug.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\info.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\home.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\sign2.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\freeze-frame.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\sign3.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\seewo_camera.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\skin\dragon.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\skin\dragon_sign.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\skin\dragon_background.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\sign4.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\choose_clear.png">
@@ -1161,13 +1138,10 @@
     <Image Include="src\ppt\end_show.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\ppt\arrow_left.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\ppt\arrow_right.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\icon.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\PluginFlag1.png">
@@ -1176,7 +1150,6 @@
     <Image Include="src\PluginFlag2.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\sign5.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\ppt\arrow_down.png">
@@ -1185,28 +1158,22 @@
     <Image Include="src\ppt\arrow_up.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\setting\Home2_en-US.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\setting\Home2_zh-CN.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\setting\Home1_en-US.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\setting\Home1_zh-CN.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\setting\Profile-picture.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\setting\Community-picture.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\setting\Home_Backgroung.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\setting\Home_Feedback.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\setting\Profile_Picture.png">
@@ -1218,10 +1185,8 @@
     <Image Include="src\setting\SettingSponsor.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\ClassIsland.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\IslandCaller.png">
       <Filter>资源文件</Filter>
     </Image>
     <Image Include="src\quick\desktop.png">
@@ -1251,16 +1216,12 @@
     <Image Include="src\pin.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\setting\Home1_zh-TW.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\setting\Home2_zh-TW.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\NamePicker.png">
       <Filter>资源文件</Filter>
     </Image>
-    <Image Include="src\SecRandom.png">
       <Filter>资源文件</Filter>
     </Image>
   </ItemGroup>

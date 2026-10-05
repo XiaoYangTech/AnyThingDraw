@@ -318,7 +318,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="additional\cpphttplib\httplib.h" />
-    <ClInclude Include="additional\ft2build.h" />
     <ClInclude Include="additional\hashlib++\hashlibpp.h" />
     <ClInclude Include="additional\hashlib++\hl_exception.h" />
     <ClInclude Include="additional\hashlib++\hl_hashwrapper.h" />
@@ -519,7 +518,6 @@
     <ClInclude Include="IdtSetting.h" />
     <ClInclude Include="IdtStart.h" />
     <ClInclude Include="IdtState.h" />
-    <ClInclude Include="IdtSysNotifications.h" />
     <ClInclude Include="AnyThingDraw\Json\IdtJson.h" />
     <ClInclude Include="AnyThingDraw\Load\IdtFontLoad.h" />
     <ClInclude Include="AnyThingDraw\Other\IdtGesture.h" />
@@ -596,7 +594,6 @@
     <ClCompile Include="HiEasyX\HiSysGUI\SysStatic.cpp" />
     <ClCompile Include="HiEasyX\HiWindow.cpp" />
     <ClCompile Include="IdtDrawpad.cpp" />
-    <ClCompile Include="IdtDrawpadList.cpp" />
     <ClCompile Include="IdtFloating.cpp" />
     <ClCompile Include="IdtFreezeFrame.cpp" />
     <ClCompile Include="IdtGuid.cpp" />
@@ -607,7 +604,6 @@
     <ClCompile Include="IdtSetting.cpp" />
     <ClCompile Include="IdtStart.cpp" />
     <ClCompile Include="IdtState.cpp" />
-    <ClCompile Include="IdtSysNotifications.cpp" />
     <ClCompile Include="IdtMagnification.cpp" />
     <ClCompile Include="IdtMain.cpp" />
     <ClCompile Include="IdtOther.cpp" />
@@ -627,26 +623,16 @@
     <ResourceCompile Include="AnyThingDraw.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="src\bug.png" />
     <Image Include="src\choice.png" />
     <Image Include="src\choose.png" />
     <Image Include="src\choose_clear.png" />
-    <Image Include="src\ClassIsland.png" />
     <Image Include="src\curve.png" />
-    <Image Include="src\endshow.png" />
     <Image Include="src\freeze-frame.png" />
-    <Image Include="src\gwxq.png" />
     <Image Include="src\highlighter_brush.png" />
-    <Image Include="src\home.png" />
     <Image Include="src\icon.ico" />
-    <Image Include="src\icon.png" />
-    <Image Include="src\info.png" />
-    <Image Include="src\IslandCaller.png" />
-    <Image Include="src\left.png" />
     <Image Include="src\line.png" />
     <Image Include="src\more.png" />
     <Image Include="src\ms_ppt.png" />
-    <Image Include="src\NamePicker.png" />
     <Image Include="src\option.png" />
     <Image Include="src\paint_brush.png" />
     <Image Include="src\perspective.png" />
@@ -656,8 +642,6 @@
     <Image Include="src\PluginFlag3.png" />
     <Image Include="src\PluginFlag4.png" />
     <Image Include="src\ppt\arrow_down.png" />
-    <Image Include="src\ppt\arrow_left.png" />
-    <Image Include="src\ppt\arrow_right.png" />
     <Image Include="src\ppt\arrow_up.png" />
     <Image Include="src\ppt\end_show.png" />
     <Image Include="src\quick\altf4.png" />
@@ -668,36 +652,15 @@
     <Image Include="src\quick\lockworkstation.png" />
     <Image Include="src\quick\taskmgr.png" />
     <Image Include="src\rectangle.png" />
-    <Image Include="src\right.png" />
     <Image Include="src\rubber.png" />
     <Image Include="src\scale.png" />
-    <Image Include="src\SecRandom.png" />
     <Image Include="src\seewo_camera.png" />
-    <Image Include="src\setting\Community-picture.png" />
-    <Image Include="src\setting\Home1_en-US.png" />
-    <Image Include="src\setting\Home1_zh-CN.png" />
-    <Image Include="src\setting\Home1_zh-TW.png" />
-    <Image Include="src\setting\Home2_en-US.png" />
     <Image Include="src\setting\Home2_zh-CN.png" />
-    <Image Include="src\setting\Home2_zh-TW.png" />
     <Image Include="src\setting\Home_Backgroung.png" />
-    <Image Include="src\setting\Home_Feedback.png" />
-    <Image Include="src\setting\Profile-picture.png" />
     <Image Include="src\setting\Profile_Picture.png" />
     <Image Include="src\setting\SettingSponsor.png" />
-    <Image Include="src\sign.png" />
-    <Image Include="src\sign1.png" />
-    <Image Include="src\sign2.png" />
-    <Image Include="src\sign3.png" />
-    <Image Include="src\sign4.png" />
-    <Image Include="src\sign5.png" />
-    <Image Include="src\skin\dragon.png" />
-    <Image Include="src\skin\dragon_background.png" />
-    <Image Include="src\skin\dragon_sign.png" />
     <Image Include="src\tick.png" />
     <Image Include="src\undo.png" />
-    <Image Include="src\weather\png00001.png" />
-    <Image Include="src\weather\weather3.png" />
     <Image Include="src\wps_wpp.png" />
     <Image Include="src\write.png" />
   </ItemGroup>
