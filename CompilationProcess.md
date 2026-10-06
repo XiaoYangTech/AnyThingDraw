@@ -64,6 +64,7 @@ msbuild "AnyThingDraw\AnyThingDraw.vcxproj" /p:Configuration=Release /p:Platform
 1. 编译 Win32 / x64 / ARM64 三个架构
 2. 使用 NSIS（`Installer/AnyThingDraw.nsi`）打包三架构安装包
 3. 上传 GitHub Release，并同步到 CNB 仓库的 Release
-4. 调用亿方智云 `ci_publish` 接口写入版本信息（供软件内自动更新使用）
+4. 调用本软件开发者后台 `ci_publish` 接口写入版本信息（供软件内自动更新使用，二开版本注意修改）
 
 所需仓库 Secrets：`CNB_TOKEN`（CNB 访问令牌）、`YF_RELEASE_TOKEN`（亿方智云后台「设置 → CI/CD 发布」生成）。
+

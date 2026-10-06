@@ -1,29 +1,25 @@
-<div align="center">
-
 **Copyright © 2026 InspireWorks（亿方运维）**
 **基于「智绘教 Inkeys」（Copyright © 2023-2025 AlanCRL（陈润林）工作室，GPL-3.0）二次开发**
+
 
 本仓库位于 [GitHub](https://github.com/XiaoYangTech/AnyThingDraw)
 
 ---
 
 # 亿方万能画笔 AnyThingDraw
-**简体中文** | [English](README_EN.md)
 
 [下载](https://draw.yfyw.top) | **[官方网站](https://draw.yfyw.top)**
 
 一款面向课堂教学的屏幕批注与演示辅助工具，基于开源项目「智绘教 Inkeys」二次开发，
 针对教学实际环境做了大量删减与修改。软件基于 C++20 编写，专为 Windows 平台打造。
 
-</div>
-
 ## 本项目说明
 
 本软件是 [智绘教 Inkeys](https://github.com/Alan-CRL/Inkeys)（作者 Alan-CRL）的修改版，与原项目相比的主要变化：
 
-- **功能精简**：删除了教学场景中用不到的模块（皮肤系统、点名器等，以及原作者已不再维护的 Inkeys2 系列图标），软件更轻量、更贴合课堂的实际使用环境。
-- **对齐上游**：绘制、PPT 联动等核心功能与上游版本保持同步。
-- **人性化逻辑**：新增并调整了多处细节交互——触摸设备自动识别、橡皮清空逻辑、PPT 工具栏行为、按处理器架构的自动更新等。
+- **功能精简**：删除了教学场景中用不到的模块（原作者已不再维护的 Inkeys2 系列皮肤系统、部分第三方社区点名器等）和死代码，软件更轻量、更贴合课堂的实际使用环境。
+- **对齐上游**：画笔弹窗拦截、PPT 联动等核心功能与上游版本保持同步。
+- **人性化逻辑**：新增并调整了多处细节交互——触摸设备自动识别、橡皮清空逻辑、PPT 工具栏行为、不分文案调整等。
 - **界面与设置优化**：全面梳理界面文本，合并重复设置项，清理无效入口与冗余选项。
 
 ## 下载与要求
@@ -49,7 +45,7 @@
 
 ## 编译说明
 
-编译步骤见 [编译流程](GithubRes/CompilationProcess_zh-CN.md)（Visual Studio 2022 + MSVC v143）。
+编译步骤见 [编译流程](CompilationProcess.md)（Visual Studio 2022 + MSVC v143）。
 
 ## 项目引用
 
