@@ -203,16 +203,6 @@ void SettingMain()
 
 	//SettingWindowBegin();
 
-	auto GetUpdateChannel = []()
-		{
-			shared_lock<shared_mutex> lock(setlistUpdateMutex);
-			return setlist.UpdateChannel;
-		};
-	auto SetUpdateChannel = [](const string& channel)
-		{
-			unique_lock<shared_mutex> lock(setlistUpdateMutex);
-			setlist.UpdateChannel = channel;
-		};
 	auto GetUpdateArchitecture = []()
 		{
 			shared_lock<shared_mutex> lock(setlistUpdateMutex);
@@ -1640,7 +1630,7 @@ void SettingMain()
 						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
 						PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 255, 255, 0));
-						ImGui::BeginChild("软件版本#1", { 750.0f * settingGlobalScale,155.0f * settingGlobalScale }, false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+						ImGui::BeginChild("软件版本#1", { 750.0f * settingGlobalScale,140.0f * settingGlobalScale }, false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 						{
 							ImGui::SetCursorPos({ 0.0f * settingGlobalScale, 0.0f * settingGlobalScale });
@@ -1654,7 +1644,7 @@ void SettingMain()
 							PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 							PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.0f);
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(251, 251, 251, 255));
-							ImGui::BeginChild("版本信息", { 750.0f * settingGlobalScale,120.0f * settingGlobalScale }, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+							ImGui::BeginChild("版本信息", { 750.0f * settingGlobalScale,105.0f * settingGlobalScale }, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 							{
 								ImGui::SetCursorPosY(ImGui::GetCursorPosY());
@@ -1663,11 +1653,6 @@ void SettingMain()
 									text += L"\n软件发布版本 " + editionDate;
 									text += L"\n软件发布时间 " + FormatBuildTime(buildTime);
 									text += L"\n软件架构和系统架构 " + programArchitecture + L" | " + targetArchitecture;
-#ifdef ATDRAW_RELEASE
-									text += L"\n软件构建模式为发布版本";
-#else
-									text += L"\n软件构建模式为非发布调测版本";
-#endif
 								}
 
 								int left_x = 10 * settingGlobalScale, right_x = 760 * settingGlobalScale;
@@ -1788,7 +1773,7 @@ void SettingMain()
 								ImFontMain->Scale = 0.5f, PushFontNum++, ImGui::PushFont(ImFontMain);
 								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(120, 120, 120, 255));
 
-								ImGui::TextUnformatted("重新安装软件至所选通道的最新版本");
+								ImGui::TextUnformatted("重新安装软件的最新版本");
 							}
 							{
 								ImGui::SetCursorPos({ 630.0f * settingGlobalScale, cursosPosY + 20.0f * settingGlobalScale });
@@ -8770,14 +8755,7 @@ void SettingMain()
 							ImFontMain->Scale = 0.5f, PushFontNum++, ImGui::PushFont(ImFontMain);
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
 
-							string channel = " (""其他通道"")";
-							string updateChannel = GetUpdateChannel();
-							if (updateChannel == "LTS") channel = " (""正式通道"")";
-							else if (updateChannel == "Insider") channel = " (""预览通道"")";
-							else if (updateChannel == "Dev") channel = " (""开发通道"")";
-							else if (updateChannel == "Canary") channel = " (""早期通道"")";
-
-							ImGui::TextUnformatted(("软件已经是最新版本" + channel).c_str());
+							ImGui::TextUnformatted("软件已经是最新版本");
 						}
 
 						{
@@ -8806,14 +8784,7 @@ void SettingMain()
 							ImFontMain->Scale = 0.5f, PushFontNum++, ImGui::PushFont(ImFontMain);
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
 
-							string channel = " (""其他通道"")";
-							string updateChannel = GetUpdateChannel();
-							if (updateChannel == "LTS") channel = " (""正式通道"")";
-							else if (updateChannel == "Insider") channel = " (""预览通道"")";
-							else if (updateChannel == "Dev") channel = " (""开发通道"")";
-							else if (updateChannel == "Canary") channel = " (""早期通道"")";
-
-							ImGui::TextUnformatted(("软件相对最新版本更新" + channel).c_str());
+							ImGui::TextUnformatted("软件相对最新版本更新");
 						}
 
 						{
