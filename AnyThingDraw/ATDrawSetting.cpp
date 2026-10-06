@@ -6299,7 +6299,7 @@ void SettingMain()
 								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(0, 0, 0, 15));
 								if (ImGui::Button("\uf901", { 30.0f * settingGlobalScale,30.0f * settingGlobalScale }))
 								{
-									ShellExecuteW(0, 0, L"https://github.com/Alan-CRL/DesktopDrawpadBlocker", 0, 0, SW_SHOW);
+									ShellExecuteW(0, 0, L"https://github.com/XiaoYangTech/DesktopDrawpadBlocker", 0, 0, SW_SHOW);
 								}
 							}
 						}
@@ -6332,7 +6332,7 @@ void SettingMain()
 										ImFontMain->Scale = 0.6f, PushFontNum++, ImGui::PushFont(ImFontMain);
 
 										PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-										ImGui::TextWrapped("同类软件悬浮窗拦截助手(DesktopDrawpadBlocker)是依据 GPLv3 许可协议发布的开源软件。\nGithub 仓库： https://github.com/Alan-CRL/DesktopDrawpadBlocker\n如果因为使用本插件功能出现问题，可以反馈给插件原作者亦或是本项目（亿方万能画笔）的开发者。");
+										ImGui::TextWrapped("同类软件悬浮窗拦截助手(DesktopDrawpadBlocker)是依据 GPLv3 许可协议发布的开源软件。\nGithub 仓库： https://github.com/XiaoYangTech/DesktopDrawpadBlocker\n如果因为使用本插件功能出现问题，可以反馈给插件原作者亦或是本项目（亿方万能画笔）的开发者。");
 									}
 
 									{
