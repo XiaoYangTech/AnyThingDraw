@@ -30,8 +30,8 @@ jobs:
 
       - name: 校验发布标记
         run: |
-          if ! grep -q '^#define ATDRAW_RELEASE$' AnyThingDraw/IdtMain.h; then
-            echo "::error::AnyThingDraw/IdtMain.h 中没有 #define ATDRAW_RELEASE，这不是发布版本"
+          if ! grep -q '^#define ATDRAW_RELEASE$' AnyThingDraw/ATDrawMain.h; then
+            echo "::error::AnyThingDraw/ATDrawMain.h 中没有 #define ATDRAW_RELEASE，这不是发布版本"
             exit 1
           fi
           echo "发布标记校验通过"
@@ -39,9 +39,9 @@ jobs:
       - name: 提取软件版本号
         id: version
         run: |
-          V=$(grep -oP '^wstring editionDate = L"\K[^"]+' AnyThingDraw/IdtMain.cpp)
+          V=$(grep -oP '^wstring editionDate = L"\K[^"]+' AnyThingDraw/ATDrawMain.cpp)
           if [ -z "$V" ]; then
-            echo "::error::未能从 IdtMain.cpp 提取 editionDate"
+            echo "::error::未能从 ATDrawMain.cpp 提取 editionDate"
             exit 1
           fi
           echo "VALUE=$V" >> "$GITHUB_OUTPUT"
@@ -129,7 +129,7 @@ jobs:
               wstring msBuildVersion = L"{{MSBUILDVER}}";
             } settingCICD;
         run: |
-          $file = 'AnyThingDraw\IdtSetting.cpp'
+          $file = 'AnyThingDraw\ATDrawSetting.cpp'
           $content = Get-Content $file
 
           $pattern = '(?ms)^\s*// signal1.*?\s*// signal1'
