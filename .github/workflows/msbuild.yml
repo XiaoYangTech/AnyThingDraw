@@ -1,727 +1,402 @@
-# 这是用于构建混合 C++ (MSVC v143) 和 C# (.NET Framework) 项目的 GitHub Actions 工作流程
+# 亿方万能画笔 AnyThingDraw 三架构构建与发布
+#
+# 推送 v* 标签触发：
+#   1. 编译 Win32 / x64 / ARM64 三个架构（MSVC v143 + .NET Framework）
+#   2. NSIS 打包出三架构安装包（请求 UAC、默认装到 Program Files\AnyThingDraw）
+#   3. 上传 GitHub Release
+#   4. 用 gsync 同步 Release 与附件到 CNB（InspireWorks/AnyThingDraw）
+#   5. 调用亿方智云 ci_publish 写入三处理器安装包（供软件内自动更新使用）
 
-name: AnyThingDraw Build
+name: Build and Release
 
 on:
   push:
-    branches:
-      - main
+    tags:
+      - 'v*'
+
 permissions:
+  contents: write
   actions: write
 
 jobs:
   check:
     name: Check
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.VALUE }}
     steps:
-      - shell: pwsh
+      - uses: actions/checkout@v4
+
+      - name: 校验发布标记
         run: |
-          $nowUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-          $repoUrl = "$Env:GITHUB_SERVER_URL/$Env:GITHUB_REPOSITORY"
-
-          "## Actions 总结" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "$nowUtc" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "构建仓库: $repoUrl" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "构建分支: ${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "构建提交者: ${{ github.actor }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Check for '#define IDT_RELEASE'
-        id: check_idt_release
-        shell: pwsh
-        run: |
-          $file = "AnyThingDraw/IdtMain.h"
-          $found = Select-String -Path $file -Pattern '^#define IDT_RELEASE$'
-          if (-not $found) 
-          {
-            "**没有找到 ``#define IDT_RELEASE``，说明是非发布版本的错误推送，请检查！**" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-            "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          if ! grep -q '^#define IDT_RELEASE$' AnyThingDraw/IdtMain.h; then
+            echo "::error::AnyThingDraw/IdtMain.h 中没有 #define IDT_RELEASE，这不是发布版本"
             exit 1
-          }
+          fi
+          echo "发布标记校验通过"
+
+      - name: 提取软件版本号
+        id: version
+        run: |
+          V=$(grep -oP '^wstring editionDate = L"\K[^"]+' AnyThingDraw/IdtMain.cpp)
+          if [ -z "$V" ]; then
+            echo "::error::未能从 IdtMain.cpp 提取 editionDate"
+            exit 1
+          fi
+          echo "VALUE=$V" >> "$GITHUB_OUTPUT"
+          echo "软件版本: $V" >> "$GITHUB_STEP_SUMMARY"
+
+  create-release:
+    name: Create Release
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 创建或更新 GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          TAG=${{ github.ref_name }}
+          if [ -f RELEASE_NOTES.md ]; then
+            gh release create "$TAG" --title "$TAG" --notes-file RELEASE_NOTES.md 2>/dev/null \
+              || gh release edit "$TAG" --title "$TAG" --notes-file RELEASE_NOTES.md
           else
-          {
-            "成功核实为标记发布版本" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-            "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          }
+            gh release create "$TAG" --title "$TAG" --generate-notes 2>/dev/null \
+              || gh release view "$TAG" > /dev/null
+          fi
 
   build:
-    name: Build
-    needs: check
+    name: Build ${{ matrix.platform }}
+    needs: create-release
     strategy:
       matrix:
         platform: [Win32, x64, ARM64]
       fail-fast: false
     runs-on: windows-2022
-
     steps:
-    - name: Checkout code 
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: 获取环境信息
-      id: environmentInfo
-      shell: pwsh
-      run: |
-        $os = Get-ComputerInfo | Select-Object -ExpandProperty OsName
-        $ver = Get-ComputerInfo | Select-Object -ExpandProperty OsVersion
-      
-        echo "OS=$os" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-        echo "OS_VERSION=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-    - name: Setup NuGet
-      uses: NuGet/setup-nuget@v2
-
-    - name: Setup .NET Framework 4.0
-      shell: pwsh
-      run: |
-        $zipPath = ".\ActionsRes\v4.0.zip"
-        $tempPath = ".\temp"
-        $targetParent = "C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework"
-        # 解压 zip 到临时目录
-        Expand-Archive -Path $zipPath -DestinationPath $tempPath
-        # 创建目标父目录（如果不存在）
-        if (!(Test-Path $targetParent)) {
-          New-Item -Path $targetParent -ItemType Directory | Out-Null
-        }
-        # 拷贝整个 v4.0 文件夹到目标父目录下
-        Copy-Item -Path "$tempPath\v4.0" -Destination $targetParent -Recurse -Force
-    - name: Restore NuGet packages
-      run: nuget restore "AnyThingDraw.sln"
-
-    - name: 填充 CI/CD 变量
-      shell: pwsh
-      env:
-        STRUCT_BLOCK: |
-          struct
-          {
-            wstring url = L"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}";
-      
-            wstring repoUrl = L"{{RepoUrl}}";
-            wstring branch = L"${{ github.ref_name }}";
-            wstring submitter = L"${{ github.actor }}";
-            wstring buildTime = L"{{UTCTIME}}";
-      
-            wstring buildOS = L"${{ steps.environmentInfo.outputs.OS }}";
-            wstring buildOSVersion = L"${{ steps.environmentInfo.outputs.OS_VERSION }}";
-            wstring buildRunnerImageOS = L"{{ImageOS}}";
-            wstring buildRunnerImageVersion = L"{{ImageVersion}}";
-      
-            wstring msBuildVersion = L"{{MSBUILDVER}}";
-          } settingCICD;
-      run: |
-        $file = 'AnyThingDraw\IdtSetting.cpp'
-        $content = Get-Content $file
-      
-        $pattern = '(?ms)^\s*// signal1.*?\s*// signal1'
-      
-        $nowUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-        $imageOS = $Env:ImageOS
-        $imageVer = $Env:ImageVersion
-        $repoUrl = "$Env:GITHUB_SERVER_URL/$Env:GITHUB_REPOSITORY"
-
-        $msbuildVersion = (msbuild /version) -join "`n"
-        $msbuildVersionEscaped = $msbuildVersion -replace "`r?`n",'\n'
-        $msbuildVersionEscaped = $msbuildVersionEscaped -replace '"','\"'
-      
-        $structText = $env:STRUCT_BLOCK `
-          -replace '\{\{UTCTIME\}\}', $nowUtc `
-          -replace '\{\{RepoUrl\}\}', $repoUrl `
-          -replace '\{\{ImageOS\}\}', $imageOS `
-          -replace '\{\{ImageVersion\}\}', $imageVer `
-          -replace '\{\{MSBUILDVER\}\}', $msbuildVersionEscaped
-      
-        $replacement = $structText -replace "`r*`n", "`r`n"
-        $newContent = ($content -join "`r`n") -replace $pattern, $replacement
-      
-        Set-Content -Path $file -Value $newContent -Encoding utf8
-      
-    - name: Build AnyThingDraw
-      run: msbuild "AnyThingDraw.sln" /p:Configuration=Release /p:Platform=${{ matrix.platform }} /verbosity:minimal
-      shell: cmd
-    
-    - name: Upload exe[unsigned] artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ${{ matrix.platform == 'Win32' && 'AnyThingDraw[Unsigned]' || 
-                  matrix.platform == 'x64' && 'AnyThingDraw64[Unsigned]' || 
-                  matrix.platform == 'ARM64' && 'AnyThingDrawArm64[Unsigned]' }}
-        path: |
-          ${{ (matrix.platform == 'Win32' && './Release/AnyThingDraw.exe') || 
-              (matrix.platform == 'x64' && './x64/Release/AnyThingDraw.exe') || 
-              (matrix.platform == 'ARM64' && './ARM64/Release/AnyThingDraw.exe') }}
-          ${{ (matrix.platform == 'Win32' && './Release/AnyThingDraw.pdb') ||
-              (matrix.platform == 'x64' && './x64/Release/AnyThingDraw.pdb') ||
-              (matrix.platform == 'ARM64' && './ARM64/Release/AnyThingDraw.pdb') }}
-          
-  package:
-    name: Package
-    runs-on: windows-2022
-    needs: build
-
-    steps:
-      # 获取版本信息
-      - name: 拉取代码
-        uses: actions/checkout@v4
-
-      - name: 拉取版本代号
-        id: softwareDate
-        shell: pwsh
-        run: |
-          $file = 'AnyThingDraw\IdtMain.cpp'
-
-          # 读取所有行，匹配特定前缀
-          $line = Get-Content $file | Where-Object { $_ -match '^wstring editionDate = L\"([^\"]+)\";' }
-          if (-not $line) 
-          {
-            Write-Host "找不到 editionDate 变量"
-              echo "VALUE='2025====!'" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          }
-          else
-          {
-            # 正则提取 editionDate 内容
-            if ($line -match '^wstring editionDate = L\"([^\"]+)\";') {
-              $date = $matches[1]
-              Write-Host "Found editionDate: $date"
-              echo "VALUE=$date" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-            } else {
-              Write-Host "格式未匹配"
-              echo "VALUE='2025====!'" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-            }
-          }
-      - name: 拉取通道代号
-        id: softwareChannel
-        shell: pwsh
-        run: |
-          $file = 'AnyThingDraw\IdtMain.cpp'
-
-          # 读取所有行，匹配特定前缀
-          $line = Get-Content $file | Where-Object { $_ -match '^wstring editionChannel = L\"([^\"]+)\";' }
-          if (-not $line) 
-          {
-            Write-Host "找不到 editionChannel 变量"
-              echo "VALUE='2025====!'" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-          }
-          else
-          {
-            # 正则提取 editionChannel 内容
-            if ($line -match '^wstring editionChannel = L\"([^\"]+)\";') {
-              $channel = $matches[1]
-              Write-Host "Found editionChannel: $channel"
-              echo "VALUE=$channel" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-            } else {
-              Write-Host "格式未匹配"
-              echo "VALUE='2025====!'" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
-            }
-          }
-
-      - shell: pwsh
-        run: |
-          "软件版本: ${{ steps.softwareDate.outputs.VALUE }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "软件通道: ${{ steps.softwareChannel.outputs.VALUE }}" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-
-      # 环境变量获取
-      - name: 获取系统信息
+      - name: 获取环境信息
         id: environmentInfo
         shell: pwsh
         run: |
           $os = Get-ComputerInfo | Select-Object -ExpandProperty OsName
           $ver = Get-ComputerInfo | Select-Object -ExpandProperty OsVersion
-          
           echo "OS=$os" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           echo "OS_VERSION=$ver" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      # 下载构建后内容
-      - name: Download AnyThingDraw[Unsigned]
-        uses: actions/download-artifact@v4
-        with:
-          name: AnyThingDraw[Unsigned]
-          path: download/win32
-      - name: Download AnyThingDraw64[Unsigned]
-        uses: actions/download-artifact@v4
-        with:
-          name: AnyThingDraw64[Unsigned]
-          path: download/x64
-      - name: Download AnyThingDrawArm64[Unsigned]
-        uses: actions/download-artifact@v4
-        with:
-          name: AnyThingDrawArm64[Unsigned]
-          path: download/arm64
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
-      # 打包整理 Package
-      - name: Prepare signpath zip folder
-        run: |
-          mkdir signatureUpload
-          mkdir signedUpload
-          mkdir packageUpload
-          copy download\win32\AnyThingDraw.exe signatureUpload\AnyThingDraw.exe
-          copy download\x64\AnyThingDraw.exe signatureUpload\AnyThingDraw64.exe
-          copy download\arm64\AnyThingDraw.exe signatureUpload\AnyThingDrawArm64.exe
-          copy download\win32\AnyThingDraw.pdb packageUpload\AnyThingDraw.pdb
-          copy download\x64\AnyThingDraw.pdb packageUpload\AnyThingDraw64.pdb
-          copy download\arm64\AnyThingDraw.pdb packageUpload\AnyThingDrawArm64.pdb
-          
-      - name: Upload Signpath[unsigned]
-        id: upload-unsigned
-        uses: actions/upload-artifact@v4
-        with:
-          name: Signpath[unsigned]
-          path: signatureUpload/
+      - name: Setup NuGet
+        uses: NuGet/setup-nuget@v2
 
-      - name: 选定签名策略
-        id: resolvePolicy
+      - name: Setup .NET Framework 4.0
         shell: pwsh
         run: |
-          $branchName = $Env:GITHUB_REF_NAME
-
-          if ($branchName -ieq 'dev') 
-          {
-            "signing_policy_slug=test-signing" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
-            "**使用测试证书签名**" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          } 
-          else 
-          {
-            "signing_policy_slug=release-signing" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
-            "**使用正式证书签名**" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          $zipPath = ".\ActionsRes\v4.0.zip"
+          $tempPath = ".\temp"
+          $targetParent = "C:\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework"
+          Expand-Archive -Path $zipPath -DestinationPath $tempPath
+          if (!(Test-Path $targetParent)) {
+            New-Item -Path $targetParent -ItemType Directory | Out-Null
           }
+          Copy-Item -Path "$tempPath\v4.0" -Destination $targetParent -Recurse -Force
 
-      - name: 提交给 SignPath 签名
-        id: signpath
-        timeout-minutes: 30
-        uses: signpath/github-action-submit-signing-request@v1.1
-        with:
-          api-token: '${{ secrets.SIGNPATH_API_TOKEN }}'
-          organization-id: '95390269-627b-496d-8127-fc47de793284'
-          project-slug: 'AnyThingDraw'
-          signing-policy-slug: '${{ steps.resolvePolicy.outputs.signing_policy_slug }}'
-          github-artifact-id: '${{ steps.upload-unsigned.outputs.artifact-id }}'
-          wait-for-completion: true
-          output-artifact-directory: './signed'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
-        
-      - name: Prepare update folder
-        if: steps.signpath.outcome == 'success'
-        run: |
-          mkdir signedUpload\AnyThingDraw
-          mkdir signedUpload\AnyThingDraw64
-          mkdir signedUpload\AnyThingDrawArm64
-          copy signed\AnyThingDraw.exe signedUpload\AnyThingDraw\AnyThingDraw.exe
-          copy signed\AnyThingDraw64.exe signedUpload\AnyThingDraw64\AnyThingDraw.exe
-          copy signed\AnyThingDrawArm64.exe signedUpload\AnyThingDrawArm64\AnyThingDraw.exe
-          
-      - name: Prepare update folder
-        if: steps.signpath.outcome != 'success'
-        run: |
-          mkdir signedUpload\AnyThingDraw
-          mkdir signedUpload\AnyThingDraw64
-          mkdir signedUpload\AnyThingDrawArm64
-          copy download\win32\AnyThingDraw.exe signedUpload\AnyThingDraw\AnyThingDraw.exe
-          copy download\x64\AnyThingDraw.exe signedUpload\AnyThingDraw64\AnyThingDraw.exe
-          copy download\arm64\AnyThingDraw.exe signedUpload\AnyThingDrawArm64\AnyThingDraw.exe
-      - if: steps.signpath.outcome != 'success'
-        shell: pwsh
-        run: |
-          "**无法完成签名！**" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+      - name: Restore NuGet packages
+        run: nuget restore "AnyThingDraw.sln"
 
-      - name: Upload AnyThingDraw
-        uses: actions/upload-artifact@v4
-        with:
-          name: AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}
-          path: |
-            signedUpload\AnyThingDraw\AnyThingDraw.exe
-            download\win32\AnyThingDraw.pdb
-      - name: Upload AnyThingDraw64
-        uses: actions/upload-artifact@v4
-        with:
-          name: AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}64
-          path: |
-            signedUpload\AnyThingDraw64\AnyThingDraw.exe
-            download\x64\AnyThingDraw.pdb
-      - name: Upload AnyThingDrawArm64
-        uses: actions/upload-artifact@v4
-        with:
-          name: AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}Arm64
-          path: |
-            signedUpload\AnyThingDrawArm64\AnyThingDraw.exe
-            download\arm64\AnyThingDraw.pdb
-
-      - name: Clean Up
+      - name: 填充 CI/CD 变量
         shell: pwsh
         env:
-          ARTIFACT_NAMES: 'AnyThingDraw[Unsigned],AnyThingDraw64[Unsigned],AnyThingDrawArm64[Unsigned],Signpath[unsigned]'
-        run: |
-          # 拆分目标 artifact 列表
-          $names = "${env:ARTIFACT_NAMES}".Split(',')
+          STRUCT_BLOCK: |
+            struct
+            {
+              wstring url = L"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}";
 
-          # 获取 artifact 元信息
-          $repo = "${{ github.repository }}"
-          $url = "https://api.github.com/repos/$repo/actions/artifacts?per_page=100"
-          $headers = @{ Authorization = "Bearer ${{ secrets.GITHUB_TOKEN }}" }
-          $response = Invoke-RestMethod -Uri $url -Headers $headers
+              wstring repoUrl = L"{{RepoUrl}}";
+              wstring branch = L"${{ github.ref_name }}";
+              wstring submitter = L"${{ github.actor }}";
+              wstring buildTime = L"{{UTCTIME}}";
 
-          # 批量删除
-          foreach ($name in $names) {
-            $artifact = $response.artifacts | Where-Object { $_.name -eq $name }
-            if ($null -ne $artifact) {
-              Write-Host "Deleting artifact: $($artifact.name) $($artifact.id)"
-              $delete_url = "https://api.github.com/repos/$repo/actions/artifacts/$($artifact.id)"
-              Invoke-RestMethod -Uri $delete_url -Headers $headers -Method Delete
-            } else {
-              Write-Host "Not found: $name"
-            }
-          }
+              wstring buildOS = L"${{ steps.environmentInfo.outputs.OS }}";
+              wstring buildOSVersion = L"${{ steps.environmentInfo.outputs.OS_VERSION }}";
+              wstring buildRunnerImageOS = L"{{ImageOS}}";
+              wstring buildRunnerImageVersion = L"{{ImageVersion}}";
 
-      - name: Compressed update package 1
+              wstring msBuildVersion = L"{{MSBUILDVER}}";
+            } settingCICD;
         run: |
-          Compress-Archive -Path .\signedUpload\AnyThingDraw\AnyThingDraw.exe -DestinationPath .\packageUpload\AnyThingDrawUpdate2025====!.zip -CompressionLevel Optimal
-      - name: Compressed update package 2
-        run: |
-          Compress-Archive -Path .\signedUpload\AnyThingDraw64\AnyThingDraw.exe -DestinationPath .\packageUpload\AnyThingDrawUpdate2025====!64.zip -CompressionLevel Optimal
-      - name: Compressed update package 3
-        run: |
-          Compress-Archive -Path .\signedUpload\AnyThingDrawArm64\AnyThingDraw.exe -DestinationPath .\packageUpload\AnyThingDrawUpdate2025====!Arm64.zip -CompressionLevel Optimal
-      
-      - name: 更新信息编写
-        shell: pwsh
-        run: |
-          $exeFile1 = 'signedUpload\AnyThingDraw\AnyThingDraw.exe'
-          $exeFile2 = 'signedUpload\AnyThingDraw64\AnyThingDraw.exe'
-          $exeFile3 = 'signedUpload\AnyThingDrawArm64\AnyThingDraw.exe'
-          $uploadFile1 = 'packageUpload\AnyThingDrawUpdate2025====!.zip'
-          $uploadFile2 = 'packageUpload\AnyThingDrawUpdate2025====!64.zip'
-          $uploadFile3 = 'packageUpload\AnyThingDrawUpdate2025====!Arm64.zip'
-          
-          $md5_1 = ((Get-FileHash -Path $exeFile1 -Algorithm MD5   ).Hash).ToLower()
-          $md5_2 = ((Get-FileHash -Path $exeFile2 -Algorithm MD5   ).Hash).ToLower()
-          $md5_3 = ((Get-FileHash -Path $exeFile3 -Algorithm MD5   ).Hash).ToLower()
-          $sha256_1 = ((Get-FileHash -Path $exeFile1 -Algorithm SHA256).Hash).ToLower()
-          $sha256_2 = ((Get-FileHash -Path $exeFile2 -Algorithm SHA256).Hash).ToLower()
-          $sha256_3 = ((Get-FileHash -Path $exeFile3 -Algorithm SHA256).Hash).ToLower()
-          $size1 = (Get-Item $uploadFile1).Length
-          $size2 = (Get-Item $uploadFile2).Length
-          $size3 = (Get-Item $uploadFile3).Length
+          $file = 'AnyThingDraw\IdtSetting.cpp'
+          $content = Get-Content $file
 
-          $content = @"
-          "${{ steps.softwareChannel.outputs.VALUE }}": {
-            "edition_date": "${{ steps.softwareDate.outputs.VALUE }}",
-            "edition_code": "",
-            "anythingdraw3": false,
-            "hash": {
-              "md5": "$md5_1",
-              "sha256": "$sha256_1",
-              "md5 64": "$md5_2",
-              "sha256 64": "$sha256_2",
-              "md5 Arm64": "$md5_3",
-              "sha256 Arm64": "$sha256_3"
-            },
-            "path": [
-              "https://get.smart-teach.cn/d/Ningbo-S3/shared/AlanCRL/Version/AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}.zip",
-              "http://home.alan-crl.top/AnyThingDraw/Version/AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}.zip",
-              "https://vip.123pan.cn/1709404/AnyThingDraw/Version/AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}.zip"
-            ],
-            "path64": [
-              "https://get.smart-teach.cn/d/Ningbo-S3/shared/AlanCRL/Version/AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}64.zip",
-              "http://home.alan-crl.top/AnyThingDraw/Version/AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}64.zip",
-              "https://vip.123pan.cn/1709404/AnyThingDraw/Version/AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}64.zip"
-            ],
-            "pathArm64": [
-              "https://get.smart-teach.cn/d/Ningbo-S3/shared/AlanCRL/Version/AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}Arm64.zip",
-              "http://home.alan-crl.top/AnyThingDraw/Version/AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}Arm64.zip",
-              "https://vip.123pan.cn/1709404/AnyThingDraw/Version/AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}Arm64.zip"
-            ],
-            "size": {
-              "file": $size1,
-              "file64": $size2,
-              "fileArm64": $size3 
-            },
-            "representation": "AnyThingDraw.exe"
-          }
-          "@
-          Set-Content -Path "packageUpload\update.txt" -Value $content -Encoding UTF8
+          $pattern = '(?ms)^\s*// signal1.*?\s*// signal1'
 
-      - name: Write Tips
-        shell: pwsh
-        run: |
           $nowUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
           $imageOS = $Env:ImageOS
           $imageVer = $Env:ImageVersion
+          $repoUrl = "$Env:GITHUB_SERVER_URL/$Env:GITHUB_REPOSITORY"
 
-          $content = @"
-          软件使用方法：
-          1. AnyThingDraw.exe 运行文件放置于一个空的文件夹内（exe 名称不能包含非英文字符）
-          2. 双击 AnyThingDraw.exe 运行即可
-          
-          提示：
-          设置桌面快捷方式和开机启动可以进软件选项界面中设置。
-          有疑问吐槽建议等等，加Q群618720802一起讨论，或咨询作者QQ2685549821。
-          
-          -----
-          
-          How to use the software:
-          1. AnyThingDraw.exe runtime file is placed in an empty folder (exe name can not contain non-English characters)
-          2. Double-click AnyThingDraw.exe to run.
-          
-          Tips: 
-          Set desktop shortcuts and boot up can be set into the software options interface.
-          If you have any questions, comments, suggestions, etc., through the software feedback channel for feedback, or consult the author alan-crl@foxmail.com.
-          
-          -----
-          
-          AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}
-          CI/CD: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          $msbuildVersion = (msbuild /version) -join "`n"
+          $msbuildVersionEscaped = $msbuildVersion -replace "`r?`n",'\n'
+          $msbuildVersionEscaped = $msbuildVersionEscaped -replace '"','\"'
 
-          Branch: ${{ github.ref_name }}
-          Channel: ${{ steps.softwareChannel.outputs.VALUE }}
-          Submitter: ${{ github.actor }}
+          $structText = $env:STRUCT_BLOCK `
+            -replace '\{\{UTCTIME\}\}', $nowUtc `
+            -replace '\{\{RepoUrl\}\}', $repoUrl `
+            -replace '\{\{ImageOS\}\}', $imageOS `
+            -replace '\{\{ImageVersion\}\}', $imageVer `
+            -replace '\{\{MSBUILDVER\}\}', $msbuildVersionEscaped
 
-          Build OS: ${{ steps.environmentInfo.outputs.OS }}
-          Build OS Version: ${{ steps.environmentInfo.outputs.OS_VERSION }}
-          Runner ImageOS: $imageOS
-          Runner ImageVersion: $imageVer
+          $replacement = $structText -replace "`r*`n", "`r`n"
+          $newContent = ($content -join "`r`n") -replace $pattern, $replacement
 
-          Build Time: $nowUtc
-          "@
-          Set-Content -Path "tips.txt" -Value $content -Encoding UTF8
+          Set-Content -Path $file -Value $newContent -Encoding utf8
 
-      - name: Prepare Tips
-        run: |
-          copy tips.txt signedUpload\AnyThingDraw\Tips.txt
-          copy tips.txt signedUpload\AnyThingDraw64\Tips.txt
-          copy tips.txt signedUpload\AnyThingDrawArm64\Tips.txt
-
-      - name: Compressed release package 1
-        run: |
-          Compress-Archive -Path .\signedUpload\AnyThingDraw -DestinationPath ".\packageUpload\32=AnyThingDraw2025====!.zip" -CompressionLevel Optimal
-      - name: Compressed release package 2
-        run: |
-          Compress-Archive -Path .\signedUpload\AnyThingDraw64 -DestinationPath ".\packageUpload\64=AnyThingDraw2025====!.zip" -CompressionLevel Optimal
-      - name: Compressed release package 3
-        run: |
-          Compress-Archive -Path .\signedUpload\AnyThingDrawArm64 -DestinationPath ".\packageUpload\Arm64=AnyThingDraw2025====!.zip" -CompressionLevel Optimal
-
-      - name: 重命名为最终命名 1
-        shell: cmd
-        run: |
-          rename ".\packageUpload\AnyThingDrawUpdate2025====!.zip" "AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}.zip"
-          rename ".\packageUpload\AnyThingDrawUpdate2025====!64.zip" "AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}64.zip"
-          rename ".\packageUpload\AnyThingDrawUpdate2025====!Arm64.zip" "AnyThingDrawUpdate${{ steps.softwareDate.outputs.VALUE }}Arm64.zip"
-
-      - name: 重命名为最终命名 2
-        if: steps.softwareChannel.outputs.VALUE == 'Dev'
-        shell: cmd
-        run: |
-          rename ".\packageUpload\32=AnyThingDraw2025====!.zip" "开发版本-32位-AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}.zip"
-          rename ".\packageUpload\64=AnyThingDraw2025====!.zip" "开发版本-64位-AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}.zip"
-          rename ".\packageUpload\Arm64=AnyThingDraw2025====!.zip" "开发版本-Arm64-AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}.zip"
-      - name: 重命名为最终命名 2
-        if: steps.softwareChannel.outputs.VALUE == 'Insider'
-        shell: cmd
-        run: |
-          rename ".\packageUpload\32=AnyThingDraw2025====!.zip" "预览版本-32位-AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}.zip"
-          rename ".\packageUpload\64=AnyThingDraw2025====!.zip" "预览版本-64位-AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}.zip"
-          rename ".\packageUpload\Arm64=AnyThingDraw2025====!.zip" "预览版本-Arm64-AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}.zip"
-      - name: 重命名为最终命名 2
-        if: steps.softwareChannel.outputs.VALUE == 'LTS' || steps.softwareChannel.outputs.VALUE == 'Main'
-        shell: cmd
-        run: |
-          rename ".\packageUpload\32=AnyThingDraw2025====!.zip" "正式版本-32位-AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}.zip"
-          rename ".\packageUpload\64=AnyThingDraw2025====!.zip" "正式版本-64位-AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}.zip"
-          rename ".\packageUpload\Arm64=AnyThingDraw2025====!.zip" "正式版本-Arm64-AnyThingDraw${{ steps.softwareDate.outputs.VALUE }}.zip"
-
-      # TEST
-      - name: Print file tree
-        run: tree /F /A
+      - name: Build AnyThingDraw
+        run: msbuild "AnyThingDraw.sln" /p:Configuration=Release /p:Platform=${{ matrix.platform }} /verbosity:minimal
         shell: cmd
 
-      - name: Upload Package
+      - name: Upload ${{ matrix.platform }} artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Package
-          compression-level: 9
-          path: packageUpload/
+          name: AnyThingDraw-${{ matrix.platform }}
+          path: |
+            ${{ (matrix.platform == 'Win32' && './Release/AnyThingDraw.exe') ||
+                (matrix.platform == 'x64' && './x64/Release/AnyThingDraw.exe') ||
+                './ARM64/Release/AnyThingDraw.exe' }}
+            ${{ (matrix.platform == 'Win32' && './Release/AnyThingDraw.pdb') ||
+                (matrix.platform == 'x64' && './x64/Release/AnyThingDraw.pdb') ||
+                './ARM64/Release/AnyThingDraw.pdb' }}
+            ${{ (matrix.platform == 'Win32' && './Release/PptCOM.dll') ||
+                (matrix.platform == 'x64' && './x64/Release/PptCOM.dll') ||
+                './ARM64/Release/PptCOM.dll' }}
 
-      - shell: pwsh
-        run: |
-          "" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "### 构建任务已完成" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "AnyThingDraw${{ steps.softwareDate.outputs.VALUE }} 中包含 exe 和对应的 pdb" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-          "Package 中包含各架构的 发布包、更新包、校验文件和对应的 pdb" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
-
-  upload:
-    name: Upload
+  package:
+    name: Package NSIS
+    needs: [check, build]
     runs-on: windows-2022
-    needs: package
-    
-    if: always() && needs.package.result == 'success'
-    
     steps:
-      - name: Download Package Artifact
+      - uses: actions/checkout@v4
+
+      - name: 下载各架构构建产物
         uses: actions/download-artifact@v4
         with:
-          name: Package
-          path: packageUpload
+          path: download
 
-      - name: Prepare History Zip
+      - name: 整理各架构文件
         shell: pwsh
         run: |
-          # 重新生成带时间戳的压缩包
-          $nowUtc = (Get-Date).ToUniversalTime().ToString("yyyy_MM_ddTHH_mm_ssZ")
-          # 从 update.txt 或之前的 artifact 中获取版本和通道（这里简单处理，你可以通过 output 传递）
-          # 为简化，我们直接从 packageUpload 中寻找信息或使用环境变量
-          New-Item -ItemType Directory -Path ".\WebDevUpload" | Out-Null
-          Compress-Archive -Path .\packageUpload\* -DestinationPath ".\WebDevUpload\PackageHistory-$nowUtc.zip" -CompressionLevel Optimal
+          New-Item -ItemType Directory -Force dist\ia32, dist\x64, dist\arm64, out | Out-Null
+          Copy-Item "download\AnyThingDraw-Win32\*" dist\ia32 -Force
+          Copy-Item "download\AnyThingDraw-x64\*"   dist\x64  -Force
+          Copy-Item "download\AnyThingDraw-ARM64\*" dist\arm64 -Force
+          Get-ChildItem -Recurse dist | Select-Object FullName
 
-      - name: Install rclone
+      - name: 安装 NSIS
+        shell: pwsh
+        run: choco install nsis -y --no-progress
+
+      - name: 打包三架构安装程序
         shell: pwsh
         run: |
-          if ("${{ secrets.WEBDAV_API_TOKEN }}" -ne "")
-          {
-            Invoke-WebRequest -Uri "https://downloads.rclone.org/rclone-current-windows-amd64.zip" -OutFile "rclone.zip"
-            Expand-Archive -Path "rclone.zip" -DestinationPath "." -Force
-            $rclonePath = (Get-ChildItem -Path "." -Filter "rclone-*" -Directory | Select-Object -First 1).FullName
-            Copy-Item "$rclonePath\rclone.exe" -Destination "C:\Windows\System32\" -Force
-          }
-          else
-          {
-            Write-Host "Skip"
-          }
+          $ver = "${{ needs.check.outputs.version }}"
+          $tag = "${{ github.ref_name }}"
+          # 位数引导使用 CNB 直链（同步完成后可下载）
+          $base  = "https://cnb.cool/InspireWorks/AnyThingDraw/-/releases/download/$tag"
+          $url64  = "$base/atdraw-$ver-Setup-x64.exe"
+          $urlarm = "$base/atdraw-$ver-Setup-arm64.exe"
+          $nsis  = "C:\Program Files (x86)\NSIS\makensis.exe"
+          $icon  = "$PWD\AnyThingDraw\src\icon.ico"
 
-      - name: Configure rclone for WebDAV
-        shell: pwsh
-        run: |
-          if ("${{ secrets.WEBDAV_API_TOKEN }}" -ne "")
-          {
-            $configDir = "$env:APPDATA\rclone"
-            if (!(Test-Path $configDir)) {
-              New-Item -ItemType Directory -Path $configDir -Force
-            }
-          
-            $obscuredPassword = & rclone obscure "$env:WEBDAV_PASSWORD"
-
-            $configContent = @"
-          [webdav]
-          type = webdav
-          url = $env:WEBDAV_ADDRESS
-          vendor = other
-          user = $env:WEBDAV_USERNAME
-          pass = $obscuredPassword
-          "@
-
-            $configContent | Out-File -FilePath "$configDir\rclone.conf" -Encoding UTF8
+          $targets = @(
+            @{ Arch = "ia32";  Dir = "$PWD\dist\ia32" },
+            @{ Arch = "x64";   Dir = "$PWD\dist\x64" },
+            @{ Arch = "arm64"; Dir = "$PWD\dist\arm64" }
+          )
+          foreach ($t in $targets) {
+            Write-Host "=== 打包 $($t.Arch) ==="
+            & $nsis "/DARCH=$($t.Arch)" "/DAPPVERSION=$ver" "/DSRCDIR=$($t.Dir)" `
+              "/DICONPATH=$icon" "/DARCH64URL=$url64" "/DARCHARM64URL=$urlarm" `
+              "/DOUTDIR=$PWD\out" "Installer\AnyThingDraw.nsi"
+            if ($LASTEXITCODE -ne 0) { Write-Host "::error::打包 $($t.Arch) 失败"; exit 1 }
           }
-          else
-          {
-            Write-Host "Skip"
-          }
+          Get-ChildItem out
 
+      - name: Upload installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers
+          path: out/*.exe
+
+  upload-release:
+    name: Upload to GitHub Release
+    needs: [package]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载安装包
+        uses: actions/download-artifact@v4
+        with:
+          name: installers
+          path: out
+
+      - name: 上传到 GitHub Release
         env:
-          WEBDAV_ADDRESS: ${{ secrets.WEBDAV_API_ADDRESS }}
-          WEBDAV_USERNAME: ${{ secrets.WEBDAV_API_USERNAME }}
-          WEBDAV_PASSWORD: ${{ secrets.WEBDAV_API_TOKEN }}
-
-      - name: Upload to WebDAV with rclone
-        id: upload_webdav
-        timeout-minutes: 300
-        continue-on-error: true
-        shell: pwsh
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if ("${{ secrets.WEBDAV_API_TOKEN }}" -ne "")
-          {
-            if (!(Test-Path "WebDevUpload")) {
-              Write-Host "上传目录 WebDevUpload 不存在"
-              exit 1
-            }
-          
-            # 开始上传
-            Write-Host "开始上传到 WebDAV..."
-            Write-Host "进度将每 10 秒更新一次"
-            Write-Host "超时时间: 300 分钟"
-            Write-Host "目标路径: /AnyThingDraw/PackageHistory/$Env:GITHUB_REF_NAME"
-            Write-Host ""
-          
-            # 执行 rclone 上传
-            $startTime = Get-Date
-            try {
-              & rclone copy "WebDevUpload/" "webdav:AnyThingDraw/PackageHistory/$Env:GITHUB_REF_NAME/" `
-                --progress `
-                --transfers 1 `
-                --checkers 1 `
-                --timeout 30s `
-                --contimeout 30s `
-                --retries 3 `
-                --retries-sleep 5s `
-                --low-level-retries 10 `
-                --stats 3s `
-                --use-mmap `
-                --verbose
-          
-              $exitCode = $LASTEXITCODE
-              $endTime = Get-Date
-              $duration = $endTime - $startTime
-          
-              if ($exitCode -eq 0) {
-                Write-Host ""
-                Write-Host "上传成功完成!"
-                Write-Host "总耗时: $($duration.ToString('hh\:mm\:ss'))"
-                Write-Host "平均速度已在上方显示"
-              } else {
-                Write-Host ""
-                Write-Host "上传失败，退出代码: $exitCode"
-                Write-Host "运行时间: $($duration.ToString('hh\:mm\:ss'))"
-                exit $exitCode
-              }
-            }
-            catch {
-              Write-Host ""
-              Write-Host "上传过程中发生异常: $($_.Exception.Message)"
-              exit 1
-            } 
-          }
-          else
-          {
-            Write-Host "Skip"
-          }   
+          TAG=${{ github.ref_name }}
+          ls -la out
+          gh release upload "$TAG" out/*.exe --clobber --repo ${{ github.repository }}
 
+  # 用 CNB 官方 gsync 工具同步 Release 到 CNB（引用附件优先用 CNB 直链，
+  # 故必须先完成同步，亿方智云发布 job 依赖本 job）
+  sync-cnb:
+    name: Sync to CNB
+    needs: [upload-release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install gsync (build from source)
+        run: |
+          git clone --depth 1 https://cnb.cool/5.5/CNB/sync/gsync.git /tmp/gsync-src
+          cd /tmp/gsync-src
+          mkdir -p "$HOME/.local/bin"
+          go build -o "$HOME/.local/bin/gsync" .
+          "$HOME/.local/bin/gsync" --help | head -5
+
+      - name: Create CNB Release (skip if exists)
         env:
-          WEBDAV_ADDRESS: ${{ secrets.WEBDAV_API_ADDRESS }}
-          WEBDAV_USERNAME: ${{ secrets.WEBDAV_API_USERNAME }}
-          WEBDAV_PASSWORD: ${{ secrets.WEBDAV_API_TOKEN }}
-
-      - name: Verify upload
-        shell: pwsh
-        continue-on-error: true
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
         run: |
-          if ("${{ secrets.WEBDAV_API_TOKEN }}" -ne "")
-          {
-            Write-Host "验证上传结果..."
-          
-            # 列出远程目录内容进行验证
-            try {
-              & rclone ls "webdav:AnyThingDraw/PackageHistory/$Env:GITHUB_REF_NAME/" --human-readable
-          
-              if ($LASTEXITCODE -eq 0) {
-                Write-Host "远程目录列表获取成功"
-              } else {
-                Write-Host "无法获取远程目录列表，但这不影响上传结果"
-              }
-            }
-            catch {
-              Write-Host " 验证步骤失败: $($_.Exception.Message)"
-            }
-          }
-          else
-          {
-            Write-Host "Skip"
-          }  
+          export PATH="$HOME/.local/bin:$PATH"
+          gsync releases create \
+            --source-repo https://cnb.cool/InspireWorks/AnyThingDraw.git \
+            --source-username cnb \
+            --source-token "$CNB_TOKEN" \
+            --tags ${{ github.ref_name }}
 
-      - if: steps.upload_webdav.outcome == 'success'
-        shell: pwsh
+      - name: Sync Release + attachments to CNB
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
-          "Package 已经上传至 [Package History 列表](https://www.123912.com/s/duk9-N7QAd)" | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Encoding utf8 -Append
+          set -e
+          export PATH="$HOME/.local/bin:$PATH"
+          TAG=${{ github.ref_name }}
+          DL_DIR=/tmp/release-assets
+          rm -rf "$DL_DIR" && mkdir -p "$DL_DIR" && cd "$DL_DIR"
+          gsync releases download \
+            --source-repo https://github.com/${{ github.repository }}.git \
+            --source-username github-actions \
+            --source-token "$GITHUB_TOKEN" \
+            --tag "$TAG"
+          # 逐文件上传（一次整批会被 CNB 限制导致附件不全）
+          find . -type f -name "*.exe" | while read -r f; do
+            n=0
+            until gsync releases upload \
+              --target-repo https://cnb.cool/InspireWorks/AnyThingDraw.git \
+              --target-username cnb \
+              --target-token "$CNB_TOKEN" \
+              --tag "$TAG" \
+              --files "$f"; do
+              n=$((n+1))
+              if [ "$n" -ge 3 ]; then
+                echo "::error::上传 $f 到 CNB 失败（已重试 3 次）"
+                exit 1
+              fi
+              echo "上传 $f 失败，10 秒后重试（第 $n 次）"
+              sleep 10
+            done
+          done
+
+      # gsync 只在创建 Release 时写入描述，已存在时不会更新，
+      # 标题/正文单独走 CNB API（PATCH /-/releases/{id}）
+      - name: Sync Release description to CNB
+        env:
+          CNB_TOKEN: ${{ secrets.CNB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          TAG=${{ github.ref_name }}
+          INFO=$(gh release view "$TAG" --json name,body)
+          RID=$(curl -sf -H "Authorization: token $CNB_TOKEN" -H "Accept: application/json" \
+            "https://api.cnb.cool/InspireWorks/AnyThingDraw/-/releases/tags/$TAG" | jq -r .id)
+          echo "$INFO" | jq -c '{name: .name, body: .body}' | curl -sf -X PATCH \
+            -H "Authorization: token $CNB_TOKEN" -H "Accept: application/json" -H "Content-Type: application/json" \
+            --data-binary @- \
+            "https://api.cnb.cool/InspireWorks/AnyThingDraw/-/releases/$RID"
+          echo "CNB Release 标题与正文已同步"
+
+  publish-cloud:
+    name: Publish to 亿方智云
+    needs: sync-cnb
+    runs-on: ubuntu-latest
+    steps:
+      - name: 下载安装包（计算大小与校验和）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=${{ github.ref_name }}
+          mkdir -p out
+          gh release download "$TAG" --repo ${{ github.repository }} --pattern '*.exe' --dir out
+          ls -la out
+
+      - name: 发布版本信息到亿方智云
+        env:
+          RELEASE_TOKEN: ${{ secrets.YF_RELEASE_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          TAG=${{ github.ref_name }}
+          VER=${TAG#v}
+          BASE="https://cnb.cool/InspireWorks/AnyThingDraw/-/releases/download/$TAG"
+
+          size_of() { stat -c%s "out/$1"; }
+          sha_of()  { sha256sum "out/$1" | cut -d' ' -f1; }
+
+          CHANGELOG=$(gh release view "$TAG" --repo ${{ github.repository }} --json body -q .body)
+
+          jq -n \
+            --arg slug "atdraw" \
+            --arg version "$TAG" \
+            --arg release_date "$(date +%F)" \
+            --arg changelog "$CHANGELOG" \
+            --arg page_url "https://cnb.cool/InspireWorks/AnyThingDraw/-/releases/tag/$TAG" \
+            --arg url32  "$BASE/atdraw-$VER-Setup-ia32.exe" \
+            --arg url64  "$BASE/atdraw-$VER-Setup-x64.exe" \
+            --arg urlarm "$BASE/atdraw-$VER-Setup-arm64.exe" \
+            --argjson size32  "$(size_of atdraw-$VER-Setup-ia32.exe)" \
+            --argjson size64  "$(size_of atdraw-$VER-Setup-x64.exe)" \
+            --argjson sizearm "$(size_of atdraw-$VER-Setup-arm64.exe)" \
+            --arg sha32  "$(sha_of atdraw-$VER-Setup-ia32.exe)" \
+            --arg sha64  "$(sha_of atdraw-$VER-Setup-x64.exe)" \
+            --arg shaarm "$(sha_of atdraw-$VER-Setup-arm64.exe)" \
+            '{
+              slug: $slug,
+              version: $version,
+              release_date: $release_date,
+              changelog: $changelog,
+              page_url: $page_url,
+              assets: [
+                { os: "win32", arch: "ia32",  os_label: "Windows（32 位）",   url: $url32,  size_bytes: $size32,  sha256: $sha32 },
+                { os: "win32", arch: "x64",   os_label: "Windows（64 位）",   url: $url64,  size_bytes: $size64,  sha256: $sha64 },
+                { os: "win32", arch: "arm64", os_label: "Windows（ARM64）", url: $urlarm, size_bytes: $sizearm, sha256: $shaarm }
+              ]
+            }' > body.json
+
+          echo "--- 发布内容 ---"
+          cat body.json | head -50
+
+          HTTP=$(curl -sS -o resp.json -w '%{http_code}' -X POST \
+            "https://api.yfyw.top/api.php?route=ci_publish" \
+            -H "Content-Type: application/json" \
+            -H "X-Release-Token: $RELEASE_TOKEN" \
+            --data-binary @body.json)
+          echo "HTTP $HTTP"
+          cat resp.json
+
+          if [ "$HTTP" != "201" ]; then
+            echo "::error::亿方智云版本发布失败（HTTP $HTTP）"
+            exit 1
+          fi
+          echo "亿方智云版本信息发布成功"

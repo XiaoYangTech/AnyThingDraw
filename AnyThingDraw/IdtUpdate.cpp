@@ -102,7 +102,12 @@ EditionInfoClass GetEditionInfo(string channel, string arch)
 	*/
 	EditionInfoClass retEditionInfo;
 
-	string editionInformation = GetEditionInformation(GetRefererInfo());
+	// 内部架构标识映射到亿方智云处理器标识
+	string apiArch = "ia32";
+	if (arch == "win64") apiArch = "x64";
+	else if (arch == "arm64") apiArch = "arm64";
+
+	string editionInformation = GetAppUpdateInformation("win32", apiArch, utf16ToUtf8(editionDate));
 	if (editionInformation == "Error")
 	{
 		retEditionInfo.errorCode = 1;
@@ -111,117 +116,58 @@ EditionInfoClass GetEditionInfo(string channel, string arch)
 
 	istringstream jsonContentStream(editionInformation);
 	Json::CharReaderBuilder readerBuilder;
-	Json::Value editionInfoValue;
+	Json::Value root;
 	string jsonErr;
-	if (Json::parseFromStream(readerBuilder, jsonContentStream, &editionInfoValue, &jsonErr))
-	{
-		bool informationCompliance = true;
-		int tryTime = 0;
-
-	getInfoStart:
-		if (editionInfoValue.isMember(channel))
-		{
-			if (editionInfoValue[channel].isMember("edition_date") && editionInfoValue[channel]["edition_date"].isString()) retEditionInfo.editionDate = utf8ToUtf16(editionInfoValue[channel]["edition_date"].asString());
-			else informationCompliance = false;
-			if (editionInfoValue[channel].isMember("edition_code") && editionInfoValue[channel]["edition_code"].isString()) retEditionInfo.editionCode = utf8ToUtf16(editionInfoValue[channel]["edition_code"].asString());
-			if (editionInfoValue[channel].isMember("anythingdraw3") && editionInfoValue[channel]["anythingdraw3"].isBool()) retEditionInfo.isAnyThingDraw3 = editionInfoValue[channel]["anythingdraw3"].asBool();
-			if (editionInfoValue[channel].isMember("explain") && editionInfoValue[channel]["explain"].isString()) retEditionInfo.explain = utf8ToUtf16(editionInfoValue[channel]["explain"].asString());
-			if (editionInfoValue[channel].isMember("hash") && editionInfoValue[channel]["hash"].isObject())
-			{
-				string hash1, hash2;
-				if (arch == "win64") hash1 = "md5 64", hash2 = "sha256 64";
-				else if (arch == "arm64") hash1 = "md5 Arm64", hash2 = "sha256 Arm64";
-				else hash1 = "md5", hash2 = "sha256";
-
-				if (editionInfoValue[channel]["hash"].isMember(hash1) && editionInfoValue[channel]["hash"][hash1].isString()) retEditionInfo.hash_md5 = editionInfoValue[channel]["hash"][hash1].asString();
-				else informationCompliance = false;
-				if (editionInfoValue[channel]["hash"].isMember(hash2) && editionInfoValue[channel]["hash"][hash2].isString()) retEditionInfo.hash_sha256 = editionInfoValue[channel]["hash"][hash2].asString();
-				else informationCompliance = false;
-			}
-			else informationCompliance = false;
-
-			{
-				string path;
-				if (arch == "win64") path = "path64";
-				else if (arch == "arm64") path = "pathArm64";
-				else path = "path";
-
-				if (editionInfoValue[channel].isMember(path) && editionInfoValue[channel][path].isArray())
-				{
-					retEditionInfo.path_size = 0;
-					for (int i = 0; i < min(editionInfoValue[channel][path].size(), 10); i++)
-					{
-						if (editionInfoValue[channel][path][i].isString())
-						{
-							retEditionInfo.path[retEditionInfo.path_size] = editionInfoValue[channel][path][i].asString();
-							retEditionInfo.path_size++;
-						}
-					}
-					if (retEditionInfo.path_size <= 0) informationCompliance = false;
-				}
-				else informationCompliance = false;
-			}
-			if (editionInfoValue[channel].isMember("size") && editionInfoValue[channel]["size"].isObject())
-			{
-				string path;
-				if (arch == "win64") path = "file64";
-				else if (arch == "arm64") path = "fileArm64";
-				else path = "file";
-
-				if (editionInfoValue[channel]["size"].isMember(path) && editionInfoValue[channel]["size"][path].isUInt64())
-					retEditionInfo.fileSize = editionInfoValue[channel]["size"][path].asUInt64();
-			}
-
-			if (editionInfoValue[channel].isMember("representation") && editionInfoValue[channel]["representation"].isString()) retEditionInfo.representation = utf8ToUtf16(editionInfoValue[channel]["representation"].asString());
-			else informationCompliance = false;
-		}
-		else informationCompliance = false;
-
-		// 失败则尝试其他通道
-		if (!informationCompliance && tryTime <= 1)
-		{
-			informationCompliance = true;
-			tryTime++;
-
-			// 尝试 LTS
-			if (tryTime == 1)
-			{
-				channel = "LTS";
-				goto getInfoStart;
-			}
-			// 尝试一个通道
-			if (editionInfoValue.size() >= 1)
-			{
-				Json::Value::Members members = editionInfoValue.getMemberNames();
-				if (channel != members[0])
-				{
-					channel = members[0];
-					goto getInfoStart;
-				}
-			}
-
-			informationCompliance = false;
-		}
-
-		if (!informationCompliance)
-		{
-			retEditionInfo.errorCode = 3;
-			return retEditionInfo;
-		}
-		else
-		{
-			retEditionInfo.channel = channel;
-			retEditionInfo.errorCode = 200;
-		}
-
-	if (retEditionInfo.errorCode == 200 && retEditionInfo.path_size > 0 && !retEditionInfo.path[0].empty())
-		latestDownloadUrl = utf8ToUtf16(retEditionInfo.path[0]);
-	}
-	else
+	if (!Json::parseFromStream(readerBuilder, jsonContentStream, &root, &jsonErr))
 	{
 		retEditionInfo.errorCode = 2;
 		return retEditionInfo;
 	}
+
+	if (!(root.isMember("ok") && root["ok"].isBool() && root["ok"].asBool() && root.isMember("data") && root["data"].isObject()))
+	{
+		retEditionInfo.errorCode = 3;
+		return retEditionInfo;
+	}
+
+	Json::Value& data = root["data"];
+	if (!(data.isMember("latest_version") && data["latest_version"].isString()))
+	{
+		retEditionInfo.errorCode = 3;
+		return retEditionInfo;
+	}
+
+	retEditionInfo.editionDate = utf8ToUtf16(data["latest_version"].asString());
+	if (data.isMember("changelog") && data["changelog"].isString()) retEditionInfo.explain = utf8ToUtf16(data["changelog"].asString());
+	if (data.isMember("page_url") && data["page_url"].isString()) retEditionInfo.pageUrl = utf8ToUtf16(data["page_url"].asString());
+	if (data.isMember("has_update") && data["has_update"].isBool()) retEditionInfo.hasUpdate = data["has_update"].asBool();
+
+	if (data.isMember("download_url") && data["download_url"].isString())
+	{
+		string downloadUrl = data["download_url"].asString();
+		if (!downloadUrl.empty())
+		{
+			size_t lastSlash = downloadUrl.find_last_of('/');
+			string fileName = (lastSlash != string::npos) ? downloadUrl.substr(lastSlash + 1) : "AnyThingDrawSetup.exe";
+			retEditionInfo.representation = utf8ToUtf16(fileName);
+			retEditionInfo.path[0] = downloadUrl;
+			retEditionInfo.path_size = 1;
+		}
+	}
+
+	if (data.isMember("matched") && data["matched"].isObject())
+	{
+		Json::Value& matched = data["matched"];
+		if (matched.isMember("sha256") && matched["sha256"].isString()) retEditionInfo.hash_sha256 = matched["sha256"].asString();
+		if (matched.isMember("size_bytes") && matched["size_bytes"].isUInt64()) retEditionInfo.fileSize = matched["size_bytes"].asUInt64();
+	}
+
+	retEditionInfo.channel = "LTS";
+	retEditionInfo.errorCode = 200;
+
+	// 手动更新按钮地址：优先更新页，其次安装包直链
+	if (!retEditionInfo.pageUrl.empty()) latestDownloadUrl = retEditionInfo.pageUrl;
+	else if (retEditionInfo.path_size > 0 && !retEditionInfo.path[0].empty()) latestDownloadUrl = utf8ToUtf16(retEditionInfo.path[0]);
 
 	return retEditionInfo;
 }
@@ -353,6 +299,74 @@ AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state,
 	return UpdateRestart;
 }
 
+AutomaticUpdateStateEnum DownloadNewInstaller(DownloadNewProgramStateClass* state, EditionInfoClass editionInfo, string url, string arch)
+{
+	using enum AutomaticUpdateStateEnum;
+
+	error_code ec;
+	if (_waccess((globalPath + L"installer").c_str(), 4) == 0)
+	{
+		filesystem::remove_all(globalPath + L"installer", ec);
+		filesystem::create_directory(globalPath + L"installer", ec);
+	}
+	else filesystem::create_directory(globalPath + L"installer", ec);
+
+	string prefix, domain, path;
+	splitUrl(url, prefix, domain, path);
+	if (domain.empty()) return UpdateDownloadFail;
+
+	state->downloadedSize.store(0);
+	state->fileSize.store(editionInfo.fileSize.load());
+
+	wstring timestamp = getTimestamp();
+	wstring tmpFile = L"atdraw_setup_" + timestamp + L".tmp";
+	wstring exeFile = L"atdraw_setup_" + timestamp + L".exe";
+
+	if (!DownloadEdition(domain, path, globalPath + L"installer\\", tmpFile, state->downloadedSize, GetRefererInfo()))
+		return UpdateDownloadFail;
+
+	filesystem::remove(globalPath + L"installer\\" + exeFile, ec);
+	filesystem::rename(globalPath + L"installer\\" + tmpFile, globalPath + L"installer\\" + exeFile, ec);
+	if (ec) return UpdateDownloadDamage;
+
+	// 云端提供了校验值 / 大小时校验安装包
+	if (!editionInfo.hash_sha256.empty())
+	{
+		hashwrapper* myWrapper = new sha256wrapper();
+		string hash_sha256 = myWrapper->getHashFromFileW(globalPath + L"installer\\" + exeFile);
+		delete myWrapper;
+		if (hash_sha256 != editionInfo.hash_sha256)
+		{
+			filesystem::remove(globalPath + L"installer\\" + exeFile, ec);
+			return UpdateDownloadDamage;
+		}
+	}
+	if (editionInfo.fileSize.load() > 0 && state->downloadedSize.load() != editionInfo.fileSize.load())
+	{
+		filesystem::remove(globalPath + L"installer\\" + exeFile, ec);
+		return UpdateDownloadDamage;
+	}
+
+	// 启动 NSIS 安装程序（安装程序自行请求 UAC 提权）
+	SHELLEXECUTEINFOW sei = { 0 };
+	sei.cbSize = sizeof(sei);
+	sei.fMask = SEE_MASK_NOCLOSEPROCESS;
+	sei.lpVerb = L"open";
+	sei.lpFile = (globalPath + L"installer\\" + exeFile).c_str();
+	sei.nShow = SW_SHOWNORMAL;
+	if (!ShellExecuteExW(&sei)) return UpdateDownloadDamage;
+
+	// 给安装程序留出弹 UAC 的时间，随后退出本程序以便覆盖安装
+	if (sei.hProcess) { WaitForSingleObject(sei.hProcess, 1500); CloseHandle(sei.hProcess); }
+
+	AutomaticUpdateState = UpdateRestart;
+
+	// 通知主循环退出，让安装程序接管覆盖安装
+	offSignal = 1;
+
+	return UpdateRestart;
+}
+
 bool isWindows8OrGreater;
 wstring windowsEdition;
 IdtAtomic<int> downloadLine = 1;
@@ -404,9 +418,18 @@ updateStart:
 		//下载最新版本
 		if (state && editionInfo.editionDate != L"" && ((IsNewerVersion(editionInfo.editionDate, editionDate) && GetUpdateTargetSnapshot().enableAutoUpdate) || mandatoryUpdate))
 		{
-			// 亿方智云模式：无直链安装包，提示新版本，由用户点击"手动更新"打开下载页
-			AutomaticUpdateState = UpdateNew;
-			state = false;
+			if (editionInfo.path_size > 0 && !editionInfo.path[0].empty())
+			{
+				// 亿方智云按架构返回了 NSIS 安装包：下载并启动安装程序
+				AutomaticUpdateState = DownloadNewInstaller(&downloadNewProgramState, editionInfo, editionInfo.path[0], updateArch);
+				state = false;
+			}
+			else
+			{
+				// 云端暂无匹配当前处理器的安装包：提示新版本，由用户点击"手动更新"打开更新页
+				AutomaticUpdateState = UpdateNew;
+				state = false;
+			}
 		}
 
 		else if (state && editionInfo.editionDate != L"")

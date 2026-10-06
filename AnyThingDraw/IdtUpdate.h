@@ -29,6 +29,9 @@ private:
 		hash_md5 = other.hash_md5;
 		hash_sha256 = other.hash_sha256;
 
+		pageUrl = other.pageUrl;
+		hasUpdate = other.hasUpdate;
+
 		isAnyThingDraw3 = other.isAnyThingDraw3;
 	}
 
@@ -46,6 +49,10 @@ public:
 
 	string hash_md5;
 	string hash_sha256;
+
+	// 亿方智云 app_update
+	wstring pageUrl; // 手动更新页地址
+	bool hasUpdate = false; // 服务端版本比较结果
 
 	// extra
 	bool isAnyThingDraw3 = false;
@@ -102,6 +109,7 @@ extern DownloadNewProgramStateClass downloadNewProgramState;
 
 void splitUrl(string input_url, string& prefix, string& domain, string& path);
 AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state, EditionInfoClass editionInfo, string url, string arch);
+AutomaticUpdateStateEnum DownloadNewInstaller(DownloadNewProgramStateClass* state, EditionInfoClass editionInfo, string url, string arch);
 
 //程序自动更新
 extern bool mandatoryUpdate;

@@ -1,10 +1,10 @@
 ﻿/*
 * @file		PptCOM.cs
-* @brief		智绘教项目 PPT 联动插件
+* @brief		亿方万能画笔 PPT 联动插件
 * @note		PPT 联动插件 相关模块
 *
 * @envir		.NET Framework 4.0
-* @site		https://github.com/Alan-CRL/AnyThingDraw
+* @site		https://github.com/XiaoYangTech/AnyThingDraw
 *
 * @author		Alan-CRL
 * @qq			2685549821

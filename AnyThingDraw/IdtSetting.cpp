@@ -8593,7 +8593,8 @@ void SettingMain()
 							ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 10.0f * settingGlobalScale);
 							if (ImGui::TextLink("手动下载最新版本"))
 							{
-								ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
+								if (!latestDownloadUrl.empty()) ShellExecuteW(0, 0, latestDownloadUrl.c_str(), 0, 0, SW_SHOW);
+								else ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
 							}
 						}
 
@@ -8630,7 +8631,8 @@ void SettingMain()
 							ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 10.0f * settingGlobalScale);
 							if (ImGui::TextLink("手动下载最新版本"))
 							{
-								ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
+								if (!latestDownloadUrl.empty()) ShellExecuteW(0, 0, latestDownloadUrl.c_str(), 0, 0, SW_SHOW);
+								else ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
 							}
 						}
 
@@ -8667,7 +8669,8 @@ void SettingMain()
 							ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 10.0f * settingGlobalScale);
 							if (ImGui::TextLink("手动下载最新版本"))
 							{
-								ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
+								if (!latestDownloadUrl.empty()) ShellExecuteW(0, 0, latestDownloadUrl.c_str(), 0, 0, SW_SHOW);
+								else ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
 							}
 						}
 
@@ -8704,7 +8707,8 @@ void SettingMain()
 							ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 10.0f * settingGlobalScale);
 							if (ImGui::TextLink("手动下载最新版本"))
 							{
-								ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
+								if (!latestDownloadUrl.empty()) ShellExecuteW(0, 0, latestDownloadUrl.c_str(), 0, 0, SW_SHOW);
+								else ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
 							}
 						}
 
@@ -8790,7 +8794,8 @@ void SettingMain()
 							ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 10.0f * settingGlobalScale);
 							if (ImGui::TextLink("手动下载最新版本"))
 							{
-								ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
+								if (!latestDownloadUrl.empty()) ShellExecuteW(0, 0, latestDownloadUrl.c_str(), 0, 0, SW_SHOW);
+								else ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
 							}
 						}
 
@@ -8827,7 +8832,8 @@ void SettingMain()
 							ImGui::SetCursorPosX(ImGui::GetCursorPos().x + 10.0f * settingGlobalScale);
 							if (ImGui::TextLink("手动下载最新版本"))
 							{
-								ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
+								if (!latestDownloadUrl.empty()) ShellExecuteW(0, 0, latestDownloadUrl.c_str(), 0, 0, SW_SHOW);
+								else ShellExecuteW(0, 0, L"https://draw.yfyw.top/", 0, 0, SW_SHOW);
 							}
 						}
 
@@ -8857,7 +8863,7 @@ void SettingMain()
 							ImFontMain->Scale = 0.5f, PushFontNum++, ImGui::PushFont(ImFontMain);
 
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-							ImGui::TextUnformatted("重启软件更新到最新版本");
+							ImGui::TextUnformatted("安装程序已启动，软件将自动关闭完成更新");
 						}
 
 						{
@@ -8996,7 +9002,7 @@ void SettingMain()
 							ImFontMain->Scale = 0.5f, PushFontNum++, ImGui::PushFont(ImFontMain);
 
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-							ImGui::TextUnformatted("Inkeys3 已经正式发布！但更新被阻止");
+							ImGui::TextUnformatted("新版本已经正式发布！但更新被阻止");
 
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_TextLink, IM_COL32(0, 95, 183, 255));
 							ImGui::SameLine();
@@ -9033,7 +9039,7 @@ void SettingMain()
 							ImFontMain->Scale = 0.5f, PushFontNum++, ImGui::PushFont(ImFontMain);
 
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-							ImGui::TextUnformatted("Inkeys3 已经正式发布！需要手动更新");
+							ImGui::TextUnformatted("新版本已经正式发布！需要手动更新");
 
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_TextLink, IM_COL32(0, 95, 183, 255));
 							ImGui::SameLine();

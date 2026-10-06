@@ -1,6 +1,6 @@
 ﻿/*
  * @file		IdtDisplayManagement.h
- * @brief		IDT Display management | 显示器管理
+ * @brief		AnyThingDraw Display management | 显示器管理
  * @note		Obtain and manage display status | 获取并管理显示器状态
  *
  * @author		AlanCRL

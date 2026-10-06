@@ -1,10 +1,10 @@
 ﻿/*
  * @file		IdtMain.h
- * @brief		智绘教项目中心头文件
+ * @brief		亿方万能画笔项目中心头文件
  * @note		用于声明中心头文件以及相关中心变量
  *
  * @envir		MSVC v143 | Windows SDK 10.0.26100
- * @site		https://github.com/Alan-CRL/AnyThingDraw
+ * @site		https://github.com/XiaoYangTech/AnyThingDraw
  *
  * @author		Alan-CRL
  * @qq			2685549821
@@ -20,7 +20,7 @@
 #define IDT_RELEASE
 // #pragma comment( linker, "/subsystem:windows /entry:mainCRTStartup" )
 
-// 智绘教最低兼容 Windows 7 sp0
+// AnyThingDraw 最低兼容 Windows 7 sp0
 // #define _WIN32_WINNT 0x0601
 // #define WINVER 0x0601
 

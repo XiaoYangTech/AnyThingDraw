@@ -7,7 +7,7 @@
 #define CPPHTTPLIB_OPENSSL_SUPPORT
 #include "cpphttplib/httplib.h"
 
-std::string GetEditionInformation(std::string referer)
+std::string GetAppUpdateInformation(std::string os, std::string arch, std::string version)
 {
 	httplib::Result res;
 	httplib::Headers headers =
@@ -16,13 +16,15 @@ std::string GetEditionInformation(std::string referer)
 		{ "Pragma", "no-cache" }
 	};
 
+	std::string query = "/apps/atdraw/api.php?route=app_update&os=" + os + "&arch=" + arch + "&version=" + version;
+
 	{
 		httplib::SSLClient scli("api.yfyw.top");
 		scli.set_follow_location(true);
 		scli.set_connection_timeout(5);
 		scli.set_read_timeout(10);
 
-		res = scli.Get("/apps/atdraw/api.php?route=app_info", headers);
+		res = scli.Get(query.c_str(), headers);
 		if (!res || res->status != 200)
 		{
 			httplib::Client cli("api.yfyw.top");
@@ -30,43 +32,14 @@ std::string GetEditionInformation(std::string referer)
 			cli.set_connection_timeout(5);
 			cli.set_read_timeout(10);
 
-			res = cli.Get("/apps/atdraw/api.php?route=app_info", headers);
+			res = cli.Get(query.c_str(), headers);
 		}
 
 		if (res && res->status == 200)
 		{
 			std::string body = res->body;
 			if (body.compare(0, 3, "\xEF\xBB\xBF") == 0) body = body.substr(3);
-
-			// 解析亿方智云响应并转换为内部版本信息格式
-			Json::Reader reader;
-			Json::Value root;
-			if (reader.parse(body, root) && root.isMember("ok") && root["ok"].asBool() && root.isMember("data") && root["data"].isObject())
-			{
-				Json::Value& data = root["data"];
-				std::string version = data.isMember("latest_version") && data["latest_version"].isString() ? data["latest_version"].asString() : "";
-				std::string downloadUrl = data.isMember("latest_download_url") && data["latest_download_url"].isString() ? data["latest_download_url"].asString() : "";
-				std::string changelog = data.isMember("latest_changelog") && data["latest_changelog"].isString() ? data["latest_changelog"].asString() : "";
-
-				if (!version.empty())
-				{
-					Json::Value out;
-					Json::Value ch(Json::objectValue);
-					ch["edition_date"] = version;
-					ch["explain"] = changelog;
-					ch["representation"] = std::string("AnyThingDraw.exe");
-					Json::Value paths(Json::arrayValue);
-					if (!downloadUrl.empty()) paths.append(downloadUrl);
-					ch["path"] = paths;
-					ch["path64"] = paths;
-					ch["pathArm64"] = paths;
-					out["LTS"] = ch;
-
-					Json::StreamWriterBuilder builder;
-					builder["indentation"] = "";
-					return Json::writeString(builder, out);
-				}
-			}
+			return body;
 		}
 	}
 

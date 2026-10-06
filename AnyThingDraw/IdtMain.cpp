@@ -1,10 +1,10 @@
 /*
  * @file		IdtMain.cpp
- * @brief		智绘教项目中心源文件
- * @note		用于初始化智绘教并调用相关模块
+ * @brief		亿方万能画笔项目中心源文件
+ * @note		用于初始化亿方万能画笔并调用相关模块
  *
  * @envir		MSVC v143 | Windows SDK 10.0.26100
- * @site		https://github.com/Alan-CRL/AnyThingDraw
+ * @site		https://github.com/XiaoYangTech/AnyThingDraw
  *
  * @author		Alan-CRL
  * @qq			2685549821
@@ -720,13 +720,13 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
 			auto isLogFile = [](const string& filename)
 				{
-					regex pattern("idt\\d+\\.log");
+					regex pattern("(?:idt|atdraw)\\d+\\.log");
 					return regex_match(filename, pattern);
 				};
 
 			auto getTimeStampFromFilename = [](const string& filename)
 				{
-					regex pattern("idt(\\d+)\\.log");
+					regex pattern("(?:idt|atdraw)(\\d+)\\.log");
 
 					smatch match;
 					if (regex_search(filename, match, pattern))
@@ -746,34 +746,16 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 					return (currentTimeStamp - fileTimeStamp) >= (7LL * 24LL * 60LL * 60LL * 1000LL) || (currentTimeStamp - fileTimeStamp) < 0; // 7天的毫秒数
 				};
 
-			auto calculateDirectorySize = [](const filesystem::path& directoryPath)
+			auto deleteOldLogFiles = [&isLogFile, &isOldLogFile](const filesystem::path& directory)
 				{
-					uintmax_t totalSize = 0;
-					for (const auto& entry : filesystem::directory_iterator(directoryPath))
-					{
-						if (entry.is_regular_file()) {
-							totalSize += entry.file_size();
-						}
-					}
-					return totalSize;
-				};
-
-			auto deleteOldLogFiles = [&isLogFile, &isOldLogFile, &calculateDirectorySize](const filesystem::path& directory)
-				{
-					uintmax_t totalSize = calculateDirectorySize(directory);
-
 					for (const auto& entry : filesystem::directory_iterator(directory))
 					{
 						if (entry.is_regular_file())
 						{
-							if (isLogFile(entry.path().filename().string()) && (totalSize > 10485760LL || isOldLogFile(entry.path())))
+							if (isLogFile(entry.path().filename().string()) && isOldLogFile(entry.path()))
 							{
-								uintmax_t entrySize = entry.file_size();
-
 								error_code ec;
 								filesystem::remove(entry.path(), ec);
-
-								if (!ec) totalSize -= entrySize;
 							}
 						}
 					}
@@ -787,9 +769,9 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			}
 		}
 
-		if (_waccess((globalPath + L"log\\idt" + Timestamp + L".log").c_str(), 0) == 0) filesystem::remove(globalPath + L"log\\idt" + Timestamp + L".log", ec);
+		if (_waccess((globalPath + L"log\\atdraw" + Timestamp + L".log").c_str(), 0) == 0) filesystem::remove(globalPath + L"log\\atdraw" + Timestamp + L".log", ec);
 
-		auto IDTLoggerFileSink = std::make_shared<spdlog::sinks::basic_file_sink<std::mutex>>(globalPath + L"log\\idt" + Timestamp + L".log", true);
+		auto IDTLoggerFileSink = std::make_shared<spdlog::sinks::basic_file_sink<std::mutex>>(globalPath + L"log\\atdraw" + Timestamp + L".log", true);
 
 		spdlog::init_thread_pool(8192, 64);
 		IDTLogger = std::make_shared<spdlog::async_logger>("IDTLogger", IDTLoggerFileSink, spdlog::thread_pool(), spdlog::async_overflow_policy::block);
@@ -1252,7 +1234,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
 	if (offSignal == 2) ShellExecuteW(NULL, NULL, GetCurrentExePath().c_str(), L"-Restart", NULL, SW_SHOWNORMAL);
 
-	IDTLogger->info("[主线程][IdtMain] 已结束智绘教所有线程并关闭程序");
+	IDTLogger->info("[主线程][IdtMain] 已结束亿方万能画笔所有线程并关闭程序");
 	return 0;
 }
 

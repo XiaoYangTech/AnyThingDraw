@@ -1,6 +1,6 @@
 ﻿/*
  * @file		IdtPlug-in.h
- * @brief		IDT plugin linkage | 智绘教插件联动
+ * @brief		AnyThingDraw plugin linkage | 亿方万能画笔插件联动
  * @note		PPT linkage components and other plugins | PPT联动组件和其他插件等
  *
  * @author		AlanCRL
