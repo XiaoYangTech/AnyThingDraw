@@ -4604,7 +4604,7 @@ void SettingMain()
 									PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(0, 0, 0, 15));
 									if (ImGui::Button("解决方案", { 100.0f * settingGlobalScale,30.0f * settingGlobalScale }))
 									{
-										ShellExecuteW(0, 0, L"https://draw.yfyw.top/tutorial/ppt-com", 0, 0, SW_SHOW);
+										ShellExecuteW(0, 0, L"https://www.yfyw.top/tutorial/fix-office-com.html", 0, 0, SW_SHOW);
 									}
 								}
 
@@ -4660,7 +4660,7 @@ void SettingMain()
 									PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(0, 0, 0, 15));
 									if (ImGui::Button("解决方案", { 100.0f * settingGlobalScale,30.0f * settingGlobalScale }))
 									{
-										ShellExecuteW(0, 0, L"https://draw.yfyw.top/tutorial/ppt-admin", 0, 0, SW_SHOW);
+										ShellExecuteW(0, 0, L"https://www.yfyw.top/tutorial/fix-software-force-runas-admin.html", 0, 0, SW_SHOW);
 									}
 								}
 
