@@ -1431,7 +1431,7 @@ void SettingMain()
 							}
 							if (ImGui::Button("\uf901", { 50.0f * settingGlobalScale,50.0f * settingGlobalScale }))
 							{
-								ShellExecuteW(0, 0, L"https://github.com/XiaoYangTech/AnyThingDraw", 0, 0, SW_SHOW);
+								ShellExecuteW(0, 0, L"https://cnb.cool/InspireWorks/AnyThingDraw", 0, 0, SW_SHOW);
 							}
 						}
 

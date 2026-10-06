@@ -1,17 +1,20 @@
-**Copyright © 2026 InspireWorks（亿方运维）**
-**基于「智绘教 Inkeys」（Copyright © 2023-2025 AlanCRL（陈润林）工作室，GPL-3.0）二次开发**
+<p align="center">
+  <img src="GithubRes/logo.png" width="128" alt="亿方万能画笔 Logo">
+</p>
 
+<h1 align="center">亿方万能画笔</h1>
 
-本仓库位于 [GitHub](https://github.com/XiaoYangTech/AnyThingDraw)
+<p align="center">
+  <a href="https://github.com/XiaoYangTech/AnyThingDraw">GitHub</a> ·
+  <a href="https://cnb.cool/InspireWorks/AnyThingDraw">CNB</a> ·
+  <a href="https://draw.yfyw.top/">官网</a>
+</p>
+
+<p align="center">一款面向课堂教学的屏幕批注与演示辅助工具，基于开源项目「智绘教 Inkeys」二次开发，针对教学实际环境做了大量删减与修改。软件基于 C++20 编写，专为 Windows 平台打造。</p>
 
 ---
 
-# 亿方万能画笔 AnyThingDraw
-
-[下载](https://draw.yfyw.top) | **[官方网站](https://draw.yfyw.top)**
-
-一款面向课堂教学的屏幕批注与演示辅助工具，基于开源项目「智绘教 Inkeys」二次开发，
-针对教学实际环境做了大量删减与修改。软件基于 C++20 编写，专为 Windows 平台打造。
+**Copyright © 2026 InspireWorks（亿方运维）** · 基于「智绘教 Inkeys」（Copyright © 2023-2025 AlanCRL（陈润林）工作室，GPL-3.0）二次开发
 
 ## 本项目说明
 
