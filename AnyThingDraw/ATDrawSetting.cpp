@@ -1431,7 +1431,7 @@ void SettingMain()
 							}
 							if (ImGui::Button("\uf901", { 50.0f * settingGlobalScale,50.0f * settingGlobalScale }))
 							{
-								ShellExecuteW(0, 0, L"https://cnb.cool/InspireWorks/AnyThingDraw", 0, 0, SW_SHOW);
+								ShellExecuteW(0, 0, L"https://github.com/XiaoYangTech/AnyThingDraw", 0, 0, SW_SHOW);
 							}
 						}
 
@@ -1461,9 +1461,9 @@ void SettingMain()
 								ImGui::SetCursorPos({ Cx + 160.0f * settingGlobalScale,Cy + 465.0f * settingGlobalScale });
 								ImFontMain->Scale = 0.8f, PushFontNum++, ImGui::PushFont(ImFontMain);
 								PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_TextLink, ImVec4(255 / 255.0f, 255 / 255.0f, 255 / 255.0f, 1.0f));
-								if (ImGui::TextLink("原项目GitHub仓库"))
+								if (ImGui::TextLink("项目GitHub仓库"))
 								{
-									ShellExecuteW(0, 0, L"https://github.com/Alan-CRL/Inkeys", 0, 0, SW_SHOW);
+									ShellExecuteW(0, 0, L"https://github.com/XiaoYangTech/AnyThingDraw", 0, 0, SW_SHOW);
 								}
 							}
 
