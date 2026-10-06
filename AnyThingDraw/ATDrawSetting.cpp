@@ -3602,7 +3602,7 @@ void SettingMain()
 							ImGui::SetCursorPos({ 0.0f * settingGlobalScale, 0.0f * settingGlobalScale });
 							ImFontMain->Scale = 0.6f, PushFontNum++, ImGui::PushFont(ImFontMain);
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-							ImGui::TextUnformatted("实验选项");
+							ImGui::TextUnformatted("光标");
 						}
 
 						{
