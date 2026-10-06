@@ -1,4 +1,4 @@
-; ============================================================
+﻿; ============================================================
 ; 亿方万能画笔 AnyThingDraw 安装程序（NSIS 3.x / Unicode）
 ;
 ; 三架构：makensis /DARCH=ia32|x64|arm64 编译出对应安装包
@@ -50,8 +50,12 @@ Unicode true
 Name "${APPDISPLAY}"
 OutFile "${OUTDIR}\atdraw-${APPVERSION}-Setup-${ARCH}.exe"
 
-; 三架构统一安装到 Program Files\AnyThingDraw（便于跨架构覆盖安装）
-InstallDir "$PROGRAMFILES64\AnyThingDraw"
+; 默认安装到 Program Files\AnyThingDraw（32 位包在 64 位系统会被引导装 64 位版）
+!if "${ARCH}" == "ia32"
+  InstallDir "$PROGRAMFILES\AnyThingDraw"
+!else
+  InstallDir "$PROGRAMFILES64\AnyThingDraw"
+!endif
 InstallDirRegKey HKLM "Software\AnyThingDraw" "InstallDir"
 
 ; 请求管理员权限（UAC）
@@ -170,7 +174,7 @@ Section "Uninstall"
     RMDir /r "$INSTDIR\log"
     RMDir /r "$INSTDIR\AnyThingDraw"
     RMDir /r "$INSTDIR\installer"
-  keep_data:
+keep_data:
 
   Delete "$INSTDIR\Uninstall.exe"
   RMDir "$INSTDIR"
