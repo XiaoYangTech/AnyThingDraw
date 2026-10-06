@@ -17,7 +17,6 @@ namespace
 {
 	struct UpdateTargetSnapshot
 	{
-		string channel;
 		string architecture;
 		bool enableAutoUpdate;
 	};
@@ -25,14 +24,9 @@ namespace
 	UpdateTargetSnapshot GetUpdateTargetSnapshot()
 	{
 		shared_lock<shared_mutex> lock(setlistUpdateMutex);
-		return { setlist.UpdateChannel, setlist.updateArchitecture, setlist.enableAutoUpdate };
+		return { setlist.updateArchitecture, setlist.enableAutoUpdate };
 	}
 
-	void SetUpdateChannelSnapshot(const string& channel)
-	{
-		unique_lock<shared_mutex> lock(setlistUpdateMutex);
-		setlist.UpdateChannel = channel;
-	}
 }
 wstring get_domain_name(wstring url) {
 	wregex pattern(L"([a-zA-z]+://[^/]+)");
@@ -57,7 +51,6 @@ string GetRefererInfo()
 	UpdateTargetSnapshot updateTarget = GetUpdateTargetSnapshot();
 	ret += utf16ToUtf8(editionDate) + ",";
 	ret += utf16ToUtf8(programArchitecture) + ",";
-	ret += updateTarget.channel + ",";
 	ret += updateTarget.enableAutoUpdate ? "true," : "false,";
 	ret += utf16ToUtf8(windowsEdition);
 	return ret;
@@ -91,7 +84,7 @@ static bool IsNewerVersion(const std::wstring& latest, const std::wstring& curre
 	return false;
 }
 
-EditionInfoClass GetEditionInfo(string channel, string arch)
+EditionInfoClass GetEditionInfo(string arch)
 {
 	/*
 	* 错误码：
@@ -162,7 +155,6 @@ EditionInfoClass GetEditionInfo(string channel, string arch)
 		if (matched.isMember("size_bytes") && matched["size_bytes"].isUInt64()) retEditionInfo.fileSize = matched["size_bytes"].asUInt64();
 	}
 
-	retEditionInfo.channel = "LTS";
 	retEditionInfo.errorCode = 200;
 
 	// 手动更新按钮地址：优先更新页，其次安装包直链
@@ -267,7 +259,6 @@ AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state,
 				root["edition"] = Json::Value(utf16ToUtf8(editionInfo.editionDate));
 				root["path"] = Json::Value("installer\\new_procedure_" + utf16ToUtf8(timestamp) + ".exe");
 				root["representation"] = Json::Value("new_procedure_" + utf16ToUtf8(timestamp) + ".exe");
-				root["channel"] = Json::Value(editionInfo.channel);
 
 				root["hash"]["md5"] = Json::Value(editionInfo.hash_md5);
 				root["hash"]["sha256"] = Json::Value(editionInfo.hash_sha256);
@@ -405,7 +396,7 @@ updateStart:
 		//获取最新版本信息
 		if (state)
 		{
-			editionInfo = GetEditionInfo(updateTarget.channel, updateArch);
+			editionInfo = GetEditionInfo(updateArch);
 
 			if (editionInfo.errorCode != 200)
 			{
@@ -413,11 +404,6 @@ updateStart:
 				if (editionInfo.errorCode == 1) AutomaticUpdateState = UpdateInformationFail;
 				else if (editionInfo.errorCode == 2) AutomaticUpdateState = UpdateInformationDamage;
 				else AutomaticUpdateState = UpdateInformationUnStandardized;
-			}
-			else if (updateTarget.channel != editionInfo.channel)
-			{
-				SetUpdateChannelSnapshot(editionInfo.channel);
-				WriteSetting();
 			}
 		}
 

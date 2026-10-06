@@ -16,8 +16,6 @@ private:
 	void cF(const EditionInfoClass& other)
 	{
 		errorCode = other.errorCode;
-		channel = other.channel;
-
 		editionDate = other.editionDate;
 		editionCode = other.editionCode;
 		explain = other.explain;
@@ -36,8 +34,6 @@ private:
 
 public:
 	int errorCode = 0;
-	string channel;
-
 	wstring editionDate;
 	wstring editionCode;
 	wstring explain;
@@ -54,7 +50,7 @@ public:
 	bool hasUpdate = false; // 服务端版本比较结果
 
 };
-EditionInfoClass GetEditionInfo(string channel, string arch);
+EditionInfoClass GetEditionInfo(string arch);
 
 enum class AutomaticUpdateStateEnum : int
 {

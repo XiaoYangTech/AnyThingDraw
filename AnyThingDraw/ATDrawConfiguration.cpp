@@ -215,8 +215,6 @@ bool ReadSetting()
 				unique_lock<shared_mutex> lock(setlistUpdateMutex);
 				if (setlistVal["UpdateSetting"].isMember("EnableAutoUpdate") && setlistVal["UpdateSetting"]["EnableAutoUpdate"].isBool())
 					setlist.enableAutoUpdate = setlistVal["UpdateSetting"]["EnableAutoUpdate"].asBool();
-				if (setlistVal["UpdateSetting"].isMember("UpdateChannel") && setlistVal["UpdateSetting"]["UpdateChannel"].isString())
-					setlist.UpdateChannel = setlistVal["UpdateSetting"]["UpdateChannel"].asString();
 				if (setlistVal["UpdateSetting"].isMember("UpdateArchitecture") && setlistVal["UpdateSetting"]["UpdateArchitecture"].isString())
 				{
 					setlist.updateArchitecture = setlistVal["UpdateSetting"]["UpdateArchitecture"].asString();
@@ -387,12 +385,10 @@ bool WriteSetting()
 {
 	if (setlist.configurationSetting.enable) setlistVal.clear();
 	bool enableAutoUpdate;
-	string updateChannel;
 	string updateArchitecture;
 	{
 		shared_lock<shared_mutex> lock(setlistUpdateMutex);
 		enableAutoUpdate = setlist.enableAutoUpdate;
-		updateChannel = setlist.UpdateChannel;
 		updateArchitecture = setlist.updateArchitecture;
 	}
 	{
@@ -449,7 +445,6 @@ bool WriteSetting()
 
 		{
 			setlistVal["UpdateSetting"]["EnableAutoUpdate"] = Json::Value(enableAutoUpdate);
-			setlistVal["UpdateSetting"]["UpdateChannel"] = Json::Value(updateChannel);
 			setlistVal["UpdateSetting"]["UpdateArchitecture"] = Json::Value(updateArchitecture);
 		}
 		{

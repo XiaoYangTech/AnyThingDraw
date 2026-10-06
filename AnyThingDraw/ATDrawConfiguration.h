@@ -15,7 +15,6 @@ struct SetListStruct
 #pragma endregion
 
 #pragma region 软件版本
-	string UpdateChannel;
 	string updateArchitecture;
 	bool enableAutoUpdate;
 #pragma endregion

@@ -854,7 +854,6 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			{
 				unique_lock<shared_mutex> lock(setlistUpdateMutex);
 				setlist.enableAutoUpdate = true;
-				setlist.UpdateChannel = "LTS";
 				{
 					setlist.updateArchitecture = utf16ToUtf8(programArchitecture);
 					if (setlist.updateArchitecture == "arm64ec") setlist.updateArchitecture = "arm64";
