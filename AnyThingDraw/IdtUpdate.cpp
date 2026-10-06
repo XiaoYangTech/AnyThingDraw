@@ -347,12 +347,18 @@ AutomaticUpdateStateEnum DownloadNewInstaller(DownloadNewProgramStateClass* stat
 		return UpdateDownloadDamage;
 	}
 
-	// 启动 NSIS 安装程序（安装程序自行请求 UAC 提权）
+	// 启动 NSIS 安装程序：/S 静默安装，/D 指定当前安装目录（必须是最后一个参数、不加引号）
+	// 安装程序自行请求 UAC 提权，安装完成后会自动重新启动本软件
+	wstring installDir = globalPath;
+	while (!installDir.empty() && installDir.back() == L'\\') installDir.pop_back();
+	wstring parameters = L"/S /D=" + installDir;
+
 	SHELLEXECUTEINFOW sei = { 0 };
 	sei.cbSize = sizeof(sei);
 	sei.fMask = SEE_MASK_NOCLOSEPROCESS;
 	sei.lpVerb = L"open";
 	sei.lpFile = (globalPath + L"installer\\" + exeFile).c_str();
+	sei.lpParameters = parameters.c_str();
 	sei.nShow = SW_SHOWNORMAL;
 	if (!ShellExecuteExW(&sei)) return UpdateDownloadDamage;
 

@@ -9,6 +9,7 @@
  * @author		Alan-CRL
  * @qq			2685549821
  * @email		alan-crl@foxmail.com
+ * @modify		InspireWorks（亿方运维）自 2026 年起修改（基于智绘教 Inkeys，GPL-3.0）
 */
 
 // 程序入口点位于 IdtMain.cpp，各个文件的解释将于稍后编写，目前其名称对应作用

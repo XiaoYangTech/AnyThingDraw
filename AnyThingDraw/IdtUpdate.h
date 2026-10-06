@@ -32,7 +32,6 @@ private:
 		pageUrl = other.pageUrl;
 		hasUpdate = other.hasUpdate;
 
-		isAnyThingDraw3 = other.isAnyThingDraw3;
 	}
 
 public:
@@ -54,8 +53,6 @@ public:
 	wstring pageUrl; // 手动更新页地址
 	bool hasUpdate = false; // 服务端版本比较结果
 
-	// extra
-	bool isAnyThingDraw3 = false;
 };
 EditionInfoClass GetEditionInfo(string channel, string arch);
 
@@ -74,8 +71,6 @@ enum class AutomaticUpdateStateEnum : int
 	UpdateNewer = 10, // 软件相对最新版本更新
 	UpdateNew = 11, // 发现软件新版本
 
-	UpdateLimit = 12, // 自动更新被阻止
-	UpdateAnyThingDraw3 = 13,
 };
 extern AutomaticUpdateStateEnum AutomaticUpdateState;
 

@@ -223,7 +223,7 @@ BEGIN
             VALUE "CompanyName", "InspireWorks（亿方运维）"
             VALUE "FileVersion", "1.0.0.1"
             VALUE "InternalName", "AnyThingDraw"
-            VALUE "LegalCopyright", "Copyright © 2023-至今 InspireWorks（亿方运维）"
+            VALUE "LegalCopyright", "Copyright © 2023-2025 AlanCRL（陈润林）工作室; Modifications Copyright © 2026 InspireWorks（亿方运维）"
             VALUE "ProductName", "AnyThingDraw"
             VALUE "ProductVersion", "详见""软件->选项->软件版本""界面"
         END

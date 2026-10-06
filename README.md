@@ -1,93 +1,55 @@
 <div align="center">
 
-**Copyright © 2023-2025 AlanCRL（陈润林）工作室**  
+**Copyright © 2026 InspireWorks（亿方运维）**
+**基于「智绘教 Inkeys」（Copyright © 2023-2025 AlanCRL（陈润林）工作室，GPL-3.0）二次开发**
 
-默认仓库位于 [Github](https://github.com/Alan-CRL/Inkeys)(https://github.com/Alan-CRL/Inkeys)  
-备用仓库位于 [GitCode](https://gitcode.com/alan16356/Inkeys)(https://gitcode.com/alan16356/Inkeys)  
+本仓库位于 [GitHub](https://github.com/XiaoYangTech/AnyThingDraw)
 
 ---
 
-[![LOGO](GithubRes/logo.png?raw=true "LOGO")](# "LOGO")
+# 亿方万能画笔 AnyThingDraw
+**简体中文** | [English](README_EN.md)
 
-# 智绘教Inkeys
-**简体中文** | [English](README_EN.md)  
+[下载](https://draw.yfyw.top) | **[官方网站](https://draw.yfyw.top)**
 
-[下载](https://www.inkeys.top/download) | **[官方网站](https://www.inkeys.top)** | 常见问题
-
-[![交流群](https://img.shields.io/badge/-%E4%BA%A4%E6%B5%81%E7%BE%A4%20618720802-blue?style=flat&logo=TencentQQ)](https://qm.qq.com/cgi-bin/qm/qr?k=9V2l83dc0yP4UYeDF-NkTX0o7_TcYqlh&jump_from=webapi&authKey=LsLLUhb1KSzHYbc8k5nCQDqTtRcRUCEE3j+DdR9IgHaF/7JF7LLpY191hsiYEBz6)  ![GitHub issues](https://img.shields.io/github/issues/Alan-CRL/IDT?logo=github&color=green)  ![GitHub stars](https://img.shields.io/github/stars/Alan-CRL/IDT)  <a href="https://hellogithub.com/repository/Alan-CRL/Inkeys" target="_blank"><img src="https://api.hellogithub.com/v1/widgets/recommend.svg?rid=4fa579f75ab54c4db7d469eb36f299e1&claim_uid=OX6xZPQMl4yWrIm&theme=small" alt="Featured｜HelloGitHub" /></a>
-
-将你的创意随心所欲地书写在屏幕的任意角落。  
-智绘教Inkeys 拥有丝滑流畅的高性能画笔、丰富强大的功能，以及众多贴心小设计，全面提升你的效率与使用体验。  
-软件基于 C++20 编写，专为 Windows 平台打造。  
-
-原名 `Intelligent-Drawing-Teaching`（简称 IDT）
-
-![](GithubRes/cover1.png?raw=true#gh-dark-mode-only)
-![](GithubRes/cover2.png?raw=true#gh-light-mode-only)
+一款面向课堂教学的屏幕批注与演示辅助工具，基于开源项目「智绘教 Inkeys」二次开发，
+针对教学实际环境做了大量删减与修改。软件基于 C++20 编写，专为 Windows 平台打造。
 
 </div>
 
-## 集锦(软件介绍)
+## 本项目说明
 
-<table width="100%">
-  <tr>
-    <td>
-      <img alt="封面" src="https://i0.hdslb.com/bfs/archive/8542868871ee67b16f385ae31ad36f52280dfc4b.jpg" height="100" style="width:auto;" />
-    </td>
-    <td>
-      <b>
-        <a href="https://www.bilibili.com/video/BV17duZzYEsE/" target="_blank">
-          Bilibili 上的 25H2 版本介绍视频
-        </a>
-      </b>
-    </td>
-  </tr>
-</table> 
+本软件是 [智绘教 Inkeys](https://github.com/Alan-CRL/Inkeys)（作者 Alan-CRL）的修改版，与原项目相比的主要变化：
 
-## 下载
-[官网下载页](https://www.inkeys.top/download) | [免登录云盘](https://www.123pan.com/s/duk9-n4dAd.html) | [Github Release 附件](https://github.com/Alan-CRL/Inkeys/releases)  
+- **功能精简**：删除了教学场景中用不到的模块（皮肤系统、点名器等，以及原作者已不再维护的 Inkeys2 系列图标），软件更轻量、更贴合课堂的实际使用环境。
+- **对齐上游**：绘制、PPT 联动等核心功能与上游版本保持同步。
+- **人性化逻辑**：新增并调整了多处细节交互——触摸设备自动识别、橡皮清空逻辑、PPT 工具栏行为、按处理器架构的自动更新等。
+- **界面与设置优化**：全面梳理界面文本，合并重复设置项，清理无效入口与冗余选项。
 
-#### 要求
-最低支持 Windows 7 (RTM, sp0)，支持 32位 / 64位 / Arm64 系统。   
+## 下载与要求
 
-## 使用条款
-使用 智绘教Inkeys 需同意我们的 [智绘教Inkeys 使用条款](https://www.inkeys.top/tos/zh-cn) | [备用链接](./TOS/zh-CN.md)
+- 官网下载页：<https://draw.yfyw.top>
+- GitHub Releases：<https://github.com/XiaoYangTech/AnyThingDraw/releases>
+
+提供 32 位 / 64 位 / ARM64 三种处理器的安装包（NSIS），支持软件内自动更新。  
+最低支持 Windows 7 (RTM, sp0)，支持 32 位 / 64 位 / Arm64 系统。
 
 ## 反馈
-问题报告与功能建议：[点击此处](https://www.wjx.cn/vm/mqNTTRL.aspx#)  
-[官方用户QQ群](https://qm.qq.com/cgi-bin/qm/qr?k=9V2l83dc0yP4UYeDF-NkTX0o7_TcYqlh&jump_from=webapi&authKey=LsLLUhb1KSzHYbc8k5nCQDqTtRcRUCEE3j+DdR9IgHaF/7JF7LLpY191hsiYEBz6)：`618720802`  
-作者QQ：`2685549821`  
-作者邮箱：`alan-crl@foxmail.com` `alancrl1007@gmail.com`
+
+问题报告与功能建议请前往 [GitHub Issues](https://github.com/XiaoYangTech/AnyThingDraw/issues)。
 
 ## 许可证
+
 本项目基于 [GNU General Public License v3.0](LICENSE) 获得许可。
 
-## 代码签名策略
-
-<table>
-  <tr>
-    <td>
-      <img alt="SignPath" src="https://signpath.org/assets/favicon-50x50.png" />
-    </td>
-    <td>
-    Free code signing on Windows provided by <a href="https://signpath.io">SignPath.io</a>, certficate by <a href="https://signpath.org/">SignPath Foundation</a>
-    </td>
-  </tr> 
-</table>
-
-- 由 [SignPath.io](https://about.signpath.io/) 提供免费代码签名，由 [SignPath Foundation](https://signpath.org/) 提供证书。
-- 提交者和审阅者：[团队成员](https://github.com/Alan-CRL/Inkeys/graphs/contributors)
-- 审批人：[Alan-CRL](https://github.com/Alan-CRL)
-
----
+**修改声明**：本软件是「智绘教 Inkeys」（Copyright © 2023-2025 AlanCRL（陈润林）工作室，GPL-3.0）的修改版本，
+由 InspireWorks（亿方运维）自 2026 年起修改与发布。
+原始版权声明、`NOTICE` 与 `ThirdpartyLicenses/` 均完整保留；
+本修改版的对应源代码发布于 <https://github.com/XiaoYangTech/AnyThingDraw>。
 
 ## 编译说明
-[编译步骤](GithubRes/CompilationProcess_zh-CN.md)
 
-### 分支说明
-- `main`：主仓库，存储上一发布版本稳定的可构建的程序源码
-- `insider`：分支仓库，存储上一预览版本的源码，可能不稳定有较多代码BUG
-- `dev`：分支仓库，每日及时更新，存储自动保存的源码，可能无法构建
+编译步骤见 [编译流程](GithubRes/CompilationProcess_zh-CN.md)（Visual Studio 2022 + MSVC v143）。
 
 ## 项目引用
 
@@ -119,11 +81,11 @@
 关于本软件使用的所有第三方库的**完整列表**及其对应的许可证文本，请查阅：
 
 - **主要组件声明（NOTICE）**：  
-  <https://github.com/Alan-CRL/Inkeys/blob/main/NOTICE>
+  <https://github.com/XiaoYangTech/AnyThingDraw/blob/main/NOTICE>
 - **第三方许可证文件汇总**：  
-  <https://github.com/Alan-CRL/Inkeys/tree/main/ThirdpartyLicenses>
+  <https://github.com/XiaoYangTech/AnyThingDraw/tree/main/ThirdpartyLicenses>
 
-> 当本使用条款与上述第三方组件的许可证存在冲突或不一致时，  
+> 当本声明与上述第三方组件的许可证存在冲突或不一致时，  
 > 就相关第三方组件的使用、复制、修改和分发事宜，以相应第三方许可证的具体条款为准。
 
 ### 第三方组件
@@ -141,7 +103,7 @@
 
 ## 其他内容
 
-访问[旧版 Readme 页面](https://github.com/Alan-CRL/IDT/blob/1d63b4ba18e01f7ac45abb0e470d2748380b4407/README.md)  
+本软件与原项目「智绘教 Inkeys」的发展方向不同，如需了解原项目，请访问：
 
-[Bilibili 上的 24H2 版本介绍视频（较旧）](https://www.bilibili.com/video/BV1Tz421z72e/)  
-[Bilibili 上的 24H1 版本介绍视频（较旧）](https://www.bilibili.com/video/BV1vJ4m147rN/)  
+- 原项目仓库：<https://github.com/Alan-CRL/Inkeys>
+- 原项目官网：<https://www.inkeys.top>

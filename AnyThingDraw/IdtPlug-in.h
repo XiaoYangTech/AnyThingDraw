@@ -6,6 +6,7 @@
  * @author		AlanCRL
  * @qq			2685549821
  * @email		alan-crl@foxmail.com
+ * @modify		InspireWorks（亿方运维）自 2026 年起修改（基于智绘教 Inkeys，GPL-3.0）
 */
 
 #pragma once

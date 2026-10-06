@@ -14,6 +14,8 @@
 ; 特性：请求 UAC 提权、默认安装到 Program Files\AnyThingDraw、
 ;       32 位安装包在 64 位处理器上引导安装 64 位 / ARM64 版本、
 ;       不显示 EULA、支持覆盖安装（结束运行中的旧版本后直接覆盖）
+; 静默安装（软件内自动更新调用）：AnyThingDraw-Setup-*.exe /S /D=<原安装目录>
+;   /S 时跳过架构引导框，安装完成后自动重新启动软件；/D 必须是最后一个参数
 ; ============================================================
 
 Unicode true
@@ -72,18 +74,20 @@ UninstallIcon "${ICONPATH}"
 !insertmacro MUI_LANGUAGE "SimpChinese"
 
 Function .onInit
-  ; ---- 处理器位数判定（不依赖任何插件，读 WOW64 环境变量）----
-  ; 64 位 Windows 上运行的 32 位进程：PROCESSOR_ARCHITEW6432 = AMD64 / ARM64
-  ; 纯 32 位 Windows：该变量不存在
+  ; ---- 处理器位数判定（不依赖任何插件）----
+  ; 注意：NSIS 生成的安装程序自身是 32 位进程，PROCESSOR_ARCHITECTURE 恒为 x86，
+  ; 不能用来判断系统位数。正确做法是读 WOW64 环境变量：
+  ;   64 位 Windows 上运行的 32 位进程：PROCESSOR_ARCHITEW6432 = AMD64 / ARM64
+  ;   纯 32 位 Windows：该变量不存在
   ReadEnvStr $0 "PROCESSOR_ARCHITEW6432"
 
 !if "${ARCH}" == "ia32"
-  StrCmp $0 "" ia32_done
+  StrCmp $0 "" ia32_done                ; 纯 32 位系统：直接安装
   StrCmp $0 "ARM64" ia32_guide_arm64
-  StrCmp $0 "AMD64" ia32_guide_x64
-  Goto ia32_done
+  Goto ia32_guide_x64
 
 ia32_guide_x64:
+  IfSilent ia32_done
   !if "${ARCH64URL}" != ""
     MessageBox MB_YESNO|MB_ICONQUESTION "检测到您的计算机使用 64 位处理器。推荐安装 64 位版本，以获得更好的性能与兼容性。$\n$\n是否现在下载 64 位安装包？" IDNO ia32_done
     ExecShell "open" "${ARCH64URL}"
@@ -92,6 +96,7 @@ ia32_guide_x64:
   Goto ia32_done
 
 ia32_guide_arm64:
+  IfSilent ia32_done
   !if "${ARCHARM64URL}" != ""
     MessageBox MB_YESNO|MB_ICONQUESTION "检测到您的计算机使用 ARM64 处理器。推荐安装 ARM64 版本，以获得更好的性能与兼容性。$\n$\n是否现在下载 ARM64 安装包？" IDNO ia32_done
     ExecShell "open" "${ARCHARM64URL}"
@@ -103,18 +108,28 @@ ia32_done:
 !endif
 
 !if "${ARCH}" == "x64"
-  ReadEnvStr $0 "PROCESSOR_ARCHITECTURE"
-  StrCmp $0 "x86" x64_block32
+  StrCmp $0 "" x64_block32              ; 纯 32 位系统：无法运行 64 位程序
+  StrCmp $0 "ARM64" x64_arm64_guide     ; ARM64 系统：可仿真运行，但推荐原生版
   Goto x64_done
+
 x64_block32:
   MessageBox MB_OK|MB_ICONSTOP "此安装包为 64 位版本，无法安装在 32 位 Windows 上。$\n请下载 32 位安装包。"
   Abort
+
+x64_arm64_guide:
+  IfSilent x64_done
+  !if "${ARCHARM64URL}" != ""
+    MessageBox MB_YESNO|MB_ICONQUESTION "检测到您的计算机使用 ARM64 处理器。推荐安装 ARM64 原生版本，以获得更好的性能。$\n$\n是否现在下载 ARM64 安装包？" IDNO x64_done
+    ExecShell "open" "${ARCHARM64URL}"
+    Abort
+  !endif
+  Goto x64_done
+
 x64_done:
 !endif
 
 !if "${ARCH}" == "arm64"
-  ReadEnvStr $0 "PROCESSOR_ARCHITECTURE"
-  StrCmp $0 "ARM64" arm64_done
+  StrCmp $0 "ARM64" arm64_done          ; ARM64 系统：直接安装
   MessageBox MB_OK|MB_ICONSTOP "此安装包为 ARM64 版本，无法安装在此设备上。$\n请下载与设备匹配的安装包。"
   Abort
 arm64_done:
@@ -157,6 +172,13 @@ Section "AnyThingDraw" SecMain
   CreateDirectory "$SMPROGRAMS\AnyThingDraw"
   CreateShortCut "$SMPROGRAMS\AnyThingDraw\AnyThingDraw.lnk" "$INSTDIR\AnyThingDraw.exe"
   CreateShortCut "$SMPROGRAMS\AnyThingDraw\卸载 AnyThingDraw.lnk" "$INSTDIR\Uninstall.exe"
+
+  ; 静默安装（由软件内自动更新触发）完成后自动启动软件
+  IfSilent start_after_install
+  Goto skip_auto_start
+start_after_install:
+  Exec '"$INSTDIR\AnyThingDraw.exe"'
+skip_auto_start:
 SectionEnd
 
 Section "Uninstall"
@@ -169,6 +191,7 @@ Section "Uninstall"
   Delete "$INSTDIR\AnyThingDraw.exe"
   Delete "$INSTDIR\PptCOM.dll"
 
+  IfSilent keep_data
   MessageBox MB_YESNO|MB_ICONQUESTION "是否同时删除配置、日志与用户数据？$\n（选择“否”将保留它们，便于日后重装继续使用）" IDNO keep_data
     RMDir /r "$INSTDIR\opt"
     RMDir /r "$INSTDIR\log"
