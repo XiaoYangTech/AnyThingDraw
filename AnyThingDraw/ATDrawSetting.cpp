@@ -72,6 +72,53 @@ struct
 } settingCICD;
 // signal1
 
+// 构建时间格式化：CI 注入的为 UTC ISO 时间（如 2026-10-06T12:34:56Z），
+// 无 CI 变量时退化为程序文件自身的最后修改时间，统一显示为中文格式
+static wstring FormatBuildTime(const wstring& rawBuildTime)
+{
+	auto formatTm = [](const tm& t) -> wstring
+		{
+			wchar_t buf[64];
+			swprintf_s(buf, L"%d年%d月%d日 %02d:%02d", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min);
+			return buf;
+		};
+
+	if (!rawBuildTime.empty())
+	{
+		int y = 0, mo = 0, d = 0, h = 0, mi = 0, s = 0;
+		if (swscanf_s(rawBuildTime.c_str(), L"%d-%d-%dT%d:%d:%d", &y, &mo, &d, &h, &mi, &s) == 6)
+		{
+			tm utc = {};
+			utc.tm_year = y - 1900, utc.tm_mon = mo - 1, utc.tm_mday = d, utc.tm_hour = h, utc.tm_min = mi, utc.tm_sec = s;
+			time_t tt = _mkgmtime(&utc);
+			if (tt != (time_t)-1)
+			{
+				tm local = {};
+				localtime_s(&local, &tt);
+				return formatTm(local);
+			}
+		}
+	}
+
+	wchar_t exePath[MAX_PATH] = {};
+	if (GetModuleFileNameW(NULL, exePath, MAX_PATH))
+	{
+		WIN32_FILE_ATTRIBUTE_DATA fad = {};
+		if (GetFileAttributesExW(exePath, GetFileExInfoStandard, &fad))
+		{
+			FILETIME ft = fad.ftLastWriteTime;
+			SYSTEMTIME stUtc = {}, stLocal = {};
+			FileTimeToSystemTime(&ft, &stUtc);
+			SystemTimeToTzSpecificLocalTime(NULL, &stUtc, &stLocal);
+			tm t2 = {};
+			t2.tm_year = stLocal.wYear - 1900, t2.tm_mon = stLocal.wMonth - 1, t2.tm_mday = stLocal.wDay, t2.tm_hour = stLocal.wHour, t2.tm_min = stLocal.wMinute;
+			return formatTm(t2);
+		}
+	}
+
+	return L"未知";
+}
+
 void SettingSeekBar()
 {
 	if (!ATDrawInputs::IsKeyBoardDown(VK_LBUTTON)) return;
@@ -1593,7 +1640,7 @@ void SettingMain()
 						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 0.0f);
 						PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 255, 255, 0));
-						ImGui::BeginChild("软件版本#1", { 750.0f * settingGlobalScale,180.0f * settingGlobalScale }, false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+						ImGui::BeginChild("软件版本#1", { 750.0f * settingGlobalScale,155.0f * settingGlobalScale }, false, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 						{
 							ImGui::SetCursorPos({ 0.0f * settingGlobalScale, 0.0f * settingGlobalScale });
@@ -1607,14 +1654,14 @@ void SettingMain()
 							PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 							PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 4.0f);
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(251, 251, 251, 255));
-							ImGui::BeginChild("版本信息", { 750.0f * settingGlobalScale,150.0f * settingGlobalScale }, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
+							ImGui::BeginChild("版本信息", { 750.0f * settingGlobalScale,120.0f * settingGlobalScale }, true, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
 							{
 								ImGui::SetCursorPosY(ImGui::GetCursorPosY());
 								wstring text;
 								{
-									text += L"\n软件发布版本 1.0.0";
-									text += L"\n软件发布时间 " + buildTime;
+									text += L"\n软件发布版本 " + editionDate;
+									text += L"\n软件发布时间 " + FormatBuildTime(buildTime);
 									text += L"\n软件架构和系统架构 " + programArchitecture + L" | " + targetArchitecture;
 #ifdef ATDRAW_RELEASE
 									text += L"\n软件构建模式为发布版本";
