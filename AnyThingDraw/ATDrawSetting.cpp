@@ -7981,7 +7981,7 @@ void SettingMain()
 						ImFontMain->Scale = 0.6f, PushFontNum++, ImGui::PushFont(ImFontMain);
 						{
 							ImGui::SetCursorPosY(30.0f);
-							wstring text = L"全局快捷键：\nCtrl + Win + Alt 切换选择 / 绘制模式\n\n绘制模式下：\nCtrl + Q 定格\nCtrl + E 穿透\nCtrl + Z 撤回 / 超级恢复\n\n其余快捷键和自定义快捷键正在测试，敬请期待";
+							wstring text = L"全局快捷键：\nCtrl + Win + Alt 切换选择 / 绘制模式\n\n绘制模式下：\nCtrl + Q 定格\nCtrl + E 穿透\nCtrl + Z 撤回";
 
 							int left_x = 20 * settingGlobalScale, right_x = 750 * settingGlobalScale;
 

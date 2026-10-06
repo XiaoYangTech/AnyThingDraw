@@ -13,27 +13,6 @@
 #include "ATDrawTime.h"
 #include "ATDrawWindow.h"
 
-deque<wstring> getPrevTwoDays(const wstring& date, int day)
-{
-	deque<wstring> ret;
-
-	std::wistringstream ss(date);
-	std::tm t = {};
-	ss >> std::get_time(&t, L"%Y-%m-%d");
-
-	for (int i = 1; i <= day; i++)
-	{
-		std::mktime(&t);
-		std::wostringstream os1;
-		os1 << std::put_time(&t, L"%Y-%m-%d");
-		ret.push_back(os1.str());
-
-		t.tm_mday -= 1;
-	}
-
-	return ret;
-}
-
 int current_record_pointer, total_record_pointer;
 int reference_record_pointer, practical_total_record_pointer;
 Json::Value record_value;
@@ -139,4 +118,3 @@ void ATDrawRecall()
 	}
 	return;
 }
-// 超级恢复操作
