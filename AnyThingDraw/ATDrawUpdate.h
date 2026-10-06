@@ -101,6 +101,7 @@ extern DownloadNewProgramStateClass downloadNewProgramState;
 void splitUrl(string input_url, string& prefix, string& domain, string& path);
 AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state, EditionInfoClass editionInfo, string url, string arch);
 AutomaticUpdateStateEnum DownloadNewInstaller(DownloadNewProgramStateClass* state, EditionInfoClass editionInfo, string url, string arch);
+void ApplyPendingUpdate();
 
 //程序自动更新
 extern bool mandatoryUpdate;

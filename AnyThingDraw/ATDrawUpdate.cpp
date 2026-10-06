@@ -338,30 +338,102 @@ AutomaticUpdateStateEnum DownloadNewInstaller(DownloadNewProgramStateClass* stat
 		return UpdateDownloadDamage;
 	}
 
-	// 启动 NSIS 安装程序：/S 静默安装，/D 指定当前安装目录（必须是最后一个参数、不加引号）
-	// 安装程序自行请求 UAC 提权，安装完成后会自动重新启动本软件
+	// 下载完成后不立即安装：写入待更新标记，下次启动软件时自动完成更新
+	// （避免使用期间被打断，安装动作推迟到下一次打开软件）
+	{
+		Json::Value root;
+		root["version"] = Json::Value(utf16ToUtf8(editionInfo.editionDate));
+		root["installer"] = Json::Value("installer\\" + utf16ToUtf8(exeFile));
+
+		Json::StreamWriterBuilder outjson;
+		outjson.settings_["emitUTF8"] = true;
+		unique_ptr<Json::StreamWriter> writer(outjson.newStreamWriter());
+		ofstream writejson(globalPath + L"installer\\pending_update.json", ios::binary);
+		writejson << "\xEF\xBB\xBF";
+		writer->write(root, &writejson);
+		writejson.close();
+	}
+
+	AutomaticUpdateState = UpdateRestart;
+
+	return UpdateRestart;
+}
+
+// 待更新标记是否就绪（已下载同一版本的安装包，等待下次启动安装）
+static bool IsPendingUpdateReady(const wstring& version)
+{
+	wstring pendingPath = globalPath + L"installer\\pending_update.json";
+	if (_waccess(pendingPath.c_str(), 4) != 0) return false;
+
+	ifstream readjson(pendingPath, ios::binary);
+	if (!readjson) return false;
+	string content((istreambuf_iterator<char>(readjson)), istreambuf_iterator<char>());
+	readjson.close();
+	if (content.compare(0, 3, "\xEF\xBB\xBF") == 0) content = content.substr(3);
+
+	Json::Reader reader;
+	Json::Value root;
+	if (!reader.parse(content, root)) return false;
+	if (!root.isMember("version") || !root["version"].isString()) return false;
+	if (utf8ToUtf16(root["version"].asString()) != version) return false;
+	if (!root.isMember("installer") || !root["installer"].isString()) return false;
+
+	wstring installerPath = globalPath + utf8ToUtf16(root["installer"].asString());
+	return _waccess(installerPath.c_str(), 4) == 0;
+}
+
+// 启动时应用已下载的更新：静默运行安装程序（由安装程序结束本程序并启动新版本）。
+// 同意 UAC 时本进程会被安装程序结束；拒绝 UAC 或安装失败则清除标记并继续正常启动。
+void ApplyPendingUpdate()
+{
+	wstring pendingPath = globalPath + L"installer\\pending_update.json";
+	if (_waccess(pendingPath.c_str(), 4) != 0) return;
+
+	string content;
+	{
+		ifstream readjson(pendingPath, ios::binary);
+		if (!readjson) return;
+		content.assign((istreambuf_iterator<char>(readjson)), istreambuf_iterator<char>());
+	}
+	if (content.compare(0, 3, "\xEF\xBB\xBF") == 0) content = content.substr(3);
+
+	Json::Reader reader;
+	Json::Value root;
+	error_code ec;
+	if (!reader.parse(content, root) || !root.isMember("installer") || !root["installer"].isString())
+	{
+		filesystem::remove(pendingPath, ec);
+		return;
+	}
+
+	wstring installerPath = globalPath + utf8ToUtf16(root["installer"].asString());
+	if (_waccess(installerPath.c_str(), 4) != 0)
+	{
+		filesystem::remove(pendingPath, ec);
+		return;
+	}
+
 	wstring installDir = globalPath;
 	while (!installDir.empty() && installDir.back() == L'\\') installDir.pop_back();
 	wstring parameters = L"/S /D=" + installDir;
+
+	ATDrawLogger->info("[主线程][ATDrawUpdate] 发现已下载的新版本，启动安装程序");
+	ATDrawLogger->flush();
 
 	SHELLEXECUTEINFOW sei = { 0 };
 	sei.cbSize = sizeof(sei);
 	sei.fMask = SEE_MASK_NOCLOSEPROCESS;
 	sei.lpVerb = L"open";
-	sei.lpFile = (globalPath + L"installer\\" + exeFile).c_str();
+	sei.lpFile = installerPath.c_str();
 	sei.lpParameters = parameters.c_str();
 	sei.nShow = SW_SHOWNORMAL;
-	if (!ShellExecuteExW(&sei)) return UpdateDownloadDamage;
+	if (!ShellExecuteExW(&sei)) return;
 
-	// 给安装程序留出弹 UAC 的时间，随后退出本程序以便覆盖安装
-	if (sei.hProcess) { WaitForSingleObject(sei.hProcess, 1500); CloseHandle(sei.hProcess); }
+	WaitForSingleObject(sei.hProcess, 300000);
+	if (sei.hProcess) CloseHandle(sei.hProcess);
 
-	AutomaticUpdateState = UpdateRestart;
-
-	// 通知主循环退出，让安装程序接管覆盖安装
-	offSignal = 1;
-
-	return UpdateRestart;
+	filesystem::remove(installerPath, ec);
+	filesystem::remove(pendingPath, ec);
 }
 
 bool isWindows8OrGreater;
@@ -412,9 +484,18 @@ updateStart:
 		{
 			if (editionInfo.path_size > 0 && !editionInfo.path[0].empty())
 			{
-				// 亿方智云按架构返回了 NSIS 安装包：下载并启动安装程序
-				AutomaticUpdateState = DownloadNewInstaller(&downloadNewProgramState, editionInfo, editionInfo.path[0], updateArch);
-				state = false;
+				if (IsPendingUpdateReady(editionInfo.editionDate))
+				{
+					// 该版本的更新包已下载：等下次启动软件时自动安装
+					AutomaticUpdateState = UpdateRestart;
+					state = false;
+				}
+				else
+				{
+					// 亿方智云按架构返回了 NSIS 安装包：下载并记录为待更新
+					AutomaticUpdateState = DownloadNewInstaller(&downloadNewProgramState, editionInfo, editionInfo.path[0], updateArch);
+					state = false;
+				}
 			}
 			else
 			{

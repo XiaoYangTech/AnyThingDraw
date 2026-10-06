@@ -785,6 +785,9 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
 		if (LaunchState::crashTry) ATDrawLogger->warn("[主线程][ATDrawMain] 发现程序先前发生过崩溃错误");
 
+		// 应用已下载的更新（若有）：静默安装并移交安装程序
+		ApplyPendingUpdate();
+
 		//logger->info("");
 		//logger->warn("");
 		//logger->error("");

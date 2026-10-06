@@ -8726,7 +8726,7 @@ void SettingMain()
 							ImFontMain->Scale = 0.5f, PushFontNum++, ImGui::PushFont(ImFontMain);
 
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-							ImGui::TextUnformatted("安装程序已启动，软件将自动关闭完成更新");
+							ImGui::TextUnformatted("新版本已下载，将在下次启动软件时自动更新");
 						}
 
 						{
