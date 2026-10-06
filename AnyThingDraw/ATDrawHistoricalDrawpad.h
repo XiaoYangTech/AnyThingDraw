@@ -1,0 +1,17 @@
+﻿#pragma once
+#include "ATDrawMain.h"
+
+void removeEmptyFolders(std::wstring path);
+void removeUnknownFiles(std::wstring path, std::deque<std::wstring> knownFiles);
+deque<wstring> getPrevTwoDays(const std::wstring& date, int day);
+
+extern int current_record_pointer, total_record_pointer;
+extern int reference_record_pointer, practical_total_record_pointer;
+extern Json::Value record_value;
+
+//载入记录
+//保存图像到指定目录
+
+// 撤回操作
+void ATDrawRecall();
+// 超级恢复操作

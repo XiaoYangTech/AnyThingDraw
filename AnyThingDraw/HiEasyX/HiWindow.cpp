@@ -18,7 +18,7 @@
 
 namespace HiEasyX
 {
-	bool IdtExSignal1 = false;
+	bool ATDrawExSignal1 = false;
 
 	////////////****** 全局变量 ******////////////
 
@@ -1408,10 +1408,10 @@ namespace HiEasyX
 		g_WndClassEx.hInstance = g_hInstance;
 		g_WndClassEx.hIcon = hIcon;
 		g_WndClassEx.hIconSm = hIconSm;
-		if (!IdtExSignal1) g_WndClassEx.hCursor = LoadCursor(nullptr, IDC_ARROW);
+		if (!ATDrawExSignal1) g_WndClassEx.hCursor = LoadCursor(nullptr, IDC_ARROW);
 		else
 		{
-			IdtExSignal1 = false;
+			ATDrawExSignal1 = false;
 
 			constexpr int width = 1;
 			constexpr int height = 1;

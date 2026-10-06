@@ -52,7 +52,7 @@
 
 namespace HiEasyX
 {
-	extern bool IdtExSignal1;
+	extern bool ATDrawExSignal1;
 
 	class Canvas;
 	class SysControlBase;

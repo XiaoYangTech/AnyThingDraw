@@ -29,8 +29,8 @@ jobs:
 
       - name: 校验发布标记
         run: |
-          if ! grep -q '^#define IDT_RELEASE$' AnyThingDraw/IdtMain.h; then
-            echo "::error::AnyThingDraw/IdtMain.h 中没有 #define IDT_RELEASE，这不是发布版本"
+          if ! grep -q '^#define ATDRAW_RELEASE$' AnyThingDraw/IdtMain.h; then
+            echo "::error::AnyThingDraw/IdtMain.h 中没有 #define ATDRAW_RELEASE，这不是发布版本"
             exit 1
           fi
           echo "发布标记校验通过"
