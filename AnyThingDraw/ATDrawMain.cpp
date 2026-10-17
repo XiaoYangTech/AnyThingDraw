@@ -113,33 +113,12 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 	{
 		globalPath = GetCurrentExeDirectory() + L"\\";
 
-		// 用户数据目录：优先程序目录（便携、绿色版行为）；仅在程序目录不可写（如 Program Files）时回退 %LOCALAPPDATA%
+		// 用户数据目录：统一放 %LOCALAPPDATA%\AnyThingDraw\（安装目录 Program Files 只读，不写程序目录）
 		{
-			wstring localAppDataPath;
-			{
-				wchar_t localAppData[MAX_PATH] = {};
-				if (GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) != 0)
-					localAppDataPath = wstring(localAppData) + L"\\AnyThingDraw\\";
-			}
-
-			bool programDirWritable = false;
-			{
-				error_code ec;
-				const wstring probeDir = globalPath + L"opt";
-				filesystem::create_directories(probeDir, ec);
-
-				const wstring probeFile = probeDir + L"\\.write_test";
-				HANDLE probeHandle = CreateFileW(probeFile.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY, NULL);
-				if (probeHandle != INVALID_HANDLE_VALUE)
-				{
-					CloseHandle(probeHandle);
-					DeleteFileW(probeFile.c_str());
-					programDirWritable = true;
-				}
-			}
-
-			if (programDirWritable || localAppDataPath.empty()) userDataPath = globalPath;
-			else userDataPath = localAppDataPath;
+			wchar_t localAppData[MAX_PATH] = {};
+			if (GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) != 0)
+				userDataPath = wstring(localAppData) + L"\\AnyThingDraw\\";
+			else userDataPath = globalPath;
 
 			error_code ec;
 			filesystem::create_directories(userDataPath, ec);

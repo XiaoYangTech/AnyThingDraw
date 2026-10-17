@@ -54,9 +54,9 @@ OutFile "${OUTDIR}\atdraw-${APPVERSION}-Setup-${ARCH}.exe"
 
 ; 默认安装到 Program Files\AnyThingDraw（32 位包在 64 位系统会被引导装 64 位版）
 !if "${ARCH}" == "ia32"
-  InstallDir "$PROGRAMFILES\AnyThingDraw"
+  InstallDir "$PROGRAMFILES\InspireWorks\AnyThingDraw"
 !else
-  InstallDir "$PROGRAMFILES64\AnyThingDraw"
+  InstallDir "$PROGRAMFILES64\InspireWorks\AnyThingDraw"
 !endif
 InstallDirRegKey HKLM "Software\AnyThingDraw" "InstallDir"
 
