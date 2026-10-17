@@ -1154,7 +1154,7 @@ void SettingMain()
 						}
 
 						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
-						if (ImGui::Button(("   \ue70b   组件"), { 150.0f * settingGlobalScale,36.0f * settingGlobalScale }))
+						if (ImGui::Button(("   \ue70b   界面"), { 150.0f * settingGlobalScale,36.0f * settingGlobalScale }))
 						{
 							settingTab = settingTabEnum::tabComponent;
 						}
@@ -6900,7 +6900,7 @@ void SettingMain()
 					{
 						ImFontMain->Scale = 0.8f, PushFontNum++, ImGui::PushFont(ImFontMain);
 						PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-						ImGui::TextUnformatted("组件");
+						ImGui::TextUnformatted("界面");
 					}
 
 					{
