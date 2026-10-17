@@ -18,7 +18,7 @@
 
 - 上一轮 ZCode 会话因思考通道退化（星号/括号嵌套乱码）作废，完整交接见 [`docs/zcode-handoff.md`](docs/zcode-handoff.md)：项目身份、环境、18 项需求完成状态、批 4a 崩溃现场、下一步顺序。
 - HEAD = `4962eb1c`，工作区干净，**ahead 3 未推送**：`9548dbaa`（删超级置顶/快捷方式保障 + DDB 回滚上游）、`e5ef6209`（用户数据目录迁 `%LOCALAPPDATA%`）、`4962eb1c`（橡皮过渡 + WPS 焦点）。
-- 批 4a（设置页侧边栏：`插件`→`演示`+`悬浮窗`、`组件`→`界面`）**未完成**；改坏的 `AnyThingDraw/ATDrawSetting.cpp` 已回滚到 HEAD，损坏版本备份在 `D:\开发\AnythingDraw\zcode-broken-ATDrawSetting.cpp.bak`。
+- 设置页改造：`组件`→`界面`（`ec3dc397`）、`插件`→`演示`+`悬浮窗`（`65c66e39`，复用同一 case 按子状态切换，未搬动大段代码）**已完成**；当时改坏的旧版 `ATDrawSetting.cpp` 备份在 `D:\开发\AnythingDraw\zcode-broken-ATDrawSetting.cpp.bak`（已无用，可删）。剩余 8 项 + 1 个待答见 `docs/zcode-handoff.md` §3。
 - 数据目录已在 `%LOCALAPPDATA%\AnyThingDraw`；安装目录只应放程序本体、`PptCOM.dll`、`exe/DesktopDrawpadBlocker.exe`。
 - 改 `ATDrawSetting.cpp` 时不要再用「整块脚本删除 + 括号配平」；按 tab 小步改、每步编译。
 - 2026-10-01~10-06 的历史改造账目（品牌/i18n/死代码/云 API/CI 发布流水线/构建坑）见 `docs/zcode-memory/inkeys-fork-dev-setup.md`。
