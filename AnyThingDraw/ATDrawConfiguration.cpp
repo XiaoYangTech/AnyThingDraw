@@ -73,38 +73,93 @@ SetListStruct setlist;
 shared_mutex setlistUpdateMutex;
 Json::Value setlistVal;
 // 首次运行新版本：把安装目录中的旧配置迁移到用户数据目录
+// 统一设置文件：deploy / pptcom / memory 合并到 userDataPath\settings.json
+static Json::Value LoadUnifiedRoot()
+{
+	Json::Value root(Json::objectValue);
+	HANDLE h = NULL;
+	if (!OccupyFileForRead(&h, userDataPath + L"settings.json")) return root;
+	LARGE_INTEGER sz = {};
+	if (!GetFileSizeEx(h, &sz) || sz.QuadPart <= 0) { UnOccupyFile(&h); return root; }
+	DWORD n = static_cast<DWORD>(sz.QuadPart);
+	string s(n, '\0');
+	DWORD read = 0;
+	SetFilePointer(h, 0, NULL, FILE_BEGIN);
+	bool ok = ReadFile(h, &s[0], n, &read, NULL) && read == n;
+	UnOccupyFile(&h);
+	if (!ok) return root;
+	if (s.size() >= 3 && static_cast<unsigned char>(s[0]) == 0xEF) s = s.substr(3);
+	Json::CharReaderBuilder rb;
+	unique_ptr<Json::CharReader> reader(rb.newCharReader());
+	string errs;
+	Json::Value parsed;
+	if (reader->parse(s.data(), s.data() + s.size(), &parsed, &errs) && parsed.isObject()) return parsed;
+	return root;
+}
+static void MergeJsonValue(Json::Value& root, const Json::Value& add)
+{
+	for (const auto& k : add.getMemberNames())
+	{
+		if (add[k].isObject() && root[k].isObject()) MergeJsonValue(root[k], add[k]);
+		else root[k] = add[k];
+	}
+}
+static void MergeFileInto(Json::Value& root, const wstring& p)
+{
+	HANDLE h = NULL;
+	if (!OccupyFileForRead(&h, p)) return;
+	LARGE_INTEGER sz = {};
+	if (!GetFileSizeEx(h, &sz) || sz.QuadPart <= 0) { UnOccupyFile(&h); return; }
+	DWORD n = static_cast<DWORD>(sz.QuadPart);
+	string s(n, '\0');
+	DWORD read = 0;
+	SetFilePointer(h, 0, NULL, FILE_BEGIN);
+	bool ok = ReadFile(h, &s[0], n, &read, NULL) && read == n;
+	UnOccupyFile(&h);
+	if (!ok) return;
+	if (s.size() >= 3 && static_cast<unsigned char>(s[0]) == 0xEF) s = s.substr(3);
+	Json::CharReaderBuilder rb;
+	unique_ptr<Json::CharReader> reader(rb.newCharReader());
+	string errs;
+	Json::Value v;
+	if (reader->parse(s.data(), s.data() + s.size(), &v, &errs) && v.isObject()) MergeJsonValue(root, v);
+}
+// 旧版分散的 json 首次启动时合并进 settings.json
 static void MigrateLegacySetting()
 {
-	error_code ec;
+	if (_waccess((userDataPath + L"settings.json").c_str(), 0) == 0) return;
 
-	// 数据目录就是程序目录时，从曾经用过的 %LOCALAPPDATA%\AnyThingDraw\ 反向迁移；否则沿用安装目录 → 用户数据目录
-	wstring sourceRoot = globalPath;
-	if (userDataPath == globalPath)
+	Json::Value root(Json::objectValue);
+	MergeFileInto(root, globalPath + L"opt\\deploy.json");
+	MergeFileInto(root, globalPath + L"opt\\pptcom_configuration.json");
+	MergeFileInto(root, globalPath + L"AnyThingDraw\\Memory\\memory.json");
 	{
 		wchar_t localAppData[MAX_PATH] = {};
-		if (GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) != 0)
-			sourceRoot = wstring(localAppData) + L"\\AnyThingDraw\\";
-	}
-
-	auto migrate = [&ec, &sourceRoot](const wstring& rel)
+		if (userDataPath != globalPath && GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) != 0)
 		{
-			wstring oldPath = sourceRoot + rel;
-			wstring newPath = userDataPath + rel;
-			if (oldPath == newPath) return;
-			if (_waccess(newPath.c_str(), 0) != 0 && _waccess(oldPath.c_str(), 0) == 0)
-			{
-				filesystem::create_directories(filesystem::path(newPath).parent_path(), ec);
-				filesystem::copy_file(oldPath, newPath, filesystem::copy_options::overwrite_existing, ec);
-			}
-		};
-	migrate(L"opt\\deploy.json");
-	migrate(L"opt\\pptcom_configuration.json");
+			wstring p = wstring(localAppData) + L"\\AnyThingDraw\\";
+			MergeFileInto(root, p + L"opt\\deploy.json");
+			MergeFileInto(root, p + L"opt\\pptcom_configuration.json");
+			MergeFileInto(root, p + L"AnyThingDraw\\Memory\\memory.json");
+		}
+	}
+	if (root.empty()) return;
+
+	HANDLE h = NULL;
+	if (!OccupyFileForWrite(&h, userDataPath + L"settings.json")) return;
+	SetFilePointer(h, 0, NULL, FILE_BEGIN);
+	SetEndOfFile(h);
+	Json::StreamWriterBuilder wb;
+	string out = "\xEF\xBB\xBF" + Json::writeString(wb, root);
+	DWORD written = 0;
+	WriteFile(h, out.data(), static_cast<DWORD>(out.size()), &written, NULL);
+	UnOccupyFile(&h);
 }
 bool ReadSetting()
 {
 	MigrateLegacySetting();
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForRead(&fileHandle, userDataPath + L"opt\\deploy.json"))
+	if (!OccupyFileForRead(&fileHandle, userDataPath + L"settings.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -470,7 +525,7 @@ bool WriteSetting()
 	}
 
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForWrite(&fileHandle, userDataPath + L"opt\\deploy.json"))
+	if (!OccupyFileForWrite(&fileHandle, userDataPath + L"settings.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -487,7 +542,9 @@ bool WriteSetting()
 	}
 
 	Json::StreamWriterBuilder writerBuilder;
-	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, setlistVal);
+	Json::Value unifiedRoot = LoadUnifiedRoot();
+	MergeJsonValue(unifiedRoot, setlistVal);
+	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, unifiedRoot);
 
 	DWORD bytesWritten = 0;
 	if (!WriteFile(fileHandle, jsonContent.data(), static_cast<DWORD>(jsonContent.size()), &bytesWritten, NULL) || bytesWritten != jsonContent.size())
@@ -504,7 +561,7 @@ PptComSetListStruct pptComSetlist;
 bool PptComReadSetting()
 {
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForRead(&fileHandle, userDataPath + L"opt\\pptcom_configuration.json"))
+	if (!OccupyFileForRead(&fileHandle, userDataPath + L"settings.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -592,7 +649,7 @@ bool PptComReadSetting()
 bool PptComReadSettingPositionOnly()
 {
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForRead(&fileHandle, userDataPath + L"opt\\pptcom_configuration.json"))
+	if (!OccupyFileForRead(&fileHandle, userDataPath + L"settings.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -676,7 +733,7 @@ bool PptComWriteSetting()
 	}
 
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForWrite(&fileHandle, userDataPath + L"opt\\pptcom_configuration.json"))
+	if (!OccupyFileForWrite(&fileHandle, userDataPath + L"settings.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -693,7 +750,9 @@ bool PptComWriteSetting()
 	}
 
 	Json::StreamWriterBuilder writerBuilder;
-	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, updateVal);
+	Json::Value unifiedRoot = LoadUnifiedRoot();
+	MergeJsonValue(unifiedRoot, updateVal);
+	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, unifiedRoot);
 
 	DWORD bytesWritten = 0;
 	if (!WriteFile(fileHandle, jsonContent.data(), static_cast<DWORD>(jsonContent.size()), &bytesWritten, NULL) || bytesWritten != jsonContent.size())
@@ -759,7 +818,9 @@ bool DdbWriteInteraction(bool change, bool close)
 	}
 
 	Json::StreamWriterBuilder writerBuilder;
-	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, updateVal);
+	Json::Value unifiedRoot = LoadUnifiedRoot();
+	MergeJsonValue(unifiedRoot, updateVal);
+	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, unifiedRoot);
 
 	DWORD bytesWritten = 0;
 	if (!WriteFile(fileHandle, jsonContent.data(), static_cast<DWORD>(jsonContent.size()), &bytesWritten, NULL) || bytesWritten != jsonContent.size())
@@ -775,7 +836,7 @@ bool DdbWriteInteraction(bool change, bool close)
 bool GetMemory()
 {
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForRead(&fileHandle, userDataPath + L"AnyThingDraw\\Memory\\memory.json"))
+	if (!OccupyFileForRead(&fileHandle, userDataPath + L"settings.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -890,7 +951,7 @@ bool SetMemory()
 	}
 
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForWrite(&fileHandle, userDataPath + L"AnyThingDraw\\Memory\\memory.json"))
+	if (!OccupyFileForWrite(&fileHandle, userDataPath + L"settings.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -907,7 +968,9 @@ bool SetMemory()
 	}
 
 	Json::StreamWriterBuilder writerBuilder;
-	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, updateVal);
+	Json::Value unifiedRoot = LoadUnifiedRoot();
+	MergeJsonValue(unifiedRoot, updateVal);
+	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, unifiedRoot);
 
 	DWORD bytesWritten = 0;
 	if (!WriteFile(fileHandle, jsonContent.data(), static_cast<DWORD>(jsonContent.size()), &bytesWritten, NULL) || bytesWritten != jsonContent.size())

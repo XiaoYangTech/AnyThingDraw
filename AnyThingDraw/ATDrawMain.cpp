@@ -161,8 +161,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 				if (GetEnvironmentVariableW(L"ProgramData", buffer, MAX_PATH) != 0) pluginPath = buffer;
 				else pluginPath = L"C:\\ProgramData";*/
 
-				pluginPath = userDataPath;
-				pluginPath += L"AnyThingDraw\\Plugin\\";
+				pluginPath = userDataPath + L"Plugin\\";
 			}
 		}
 	}
