@@ -925,7 +925,7 @@ void SettingMain()
 					tabCICD,
 					tab2,
 					tab3,
-					tab4,
+					tabDemo,
 					tabComponent,
 					tab5,
 					tab6,
@@ -1103,7 +1103,7 @@ void SettingMain()
 					{
 						ImGui::SetCursorPos({ 10.0f * settingGlobalScale,ImGui::GetCursorPosY() + 4.0f * settingGlobalScale });
 
-						if (settingTab == settingTabEnum::tab4)
+						if (settingTab == settingTabEnum::tabDemo && settingPlugInTab != settingPlugInTabEnum::tabPlugDDB)
 						{
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 10));
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(0, 0, 0, 10));
@@ -1123,10 +1123,41 @@ void SettingMain()
 						}
 
 						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
-						if (ImGui::Button(("   \ue74c   插件"), { 150.0f * settingGlobalScale,36.0f * settingGlobalScale }))
+						if (ImGui::Button(("   \ue74c   演示"), { 150.0f * settingGlobalScale,36.0f * settingGlobalScale }))
 						{
 							settingPlugInTab = settingPlugInTabEnum::tabPlug1;
-							settingTab = settingTabEnum::tab4;
+							settingTab = settingTabEnum::tabDemo;
+						}
+					}
+
+					// 悬浮窗
+					{
+						ImGui::SetCursorPos({ 10.0f * settingGlobalScale,ImGui::GetCursorPosY() + 4.0f * settingGlobalScale });
+
+						if (settingTab == settingTabEnum::tabDemo && settingPlugInTab == settingPlugInTabEnum::tabPlugDDB)
+						{
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 10));
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(0, 0, 0, 10));
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(0, 0, 0, 10));
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 228));
+
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(0, 0, 0, 0));
+						}
+						else
+						{
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(255, 255, 255, 0));
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(0, 0, 0, 10));
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ButtonActive, IM_COL32(0, 0, 0, 6));
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 228));
+
+							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(0, 0, 0, 0));
+						}
+
+						PushStyleVarNum++, ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0.0f, 0.5f));
+						if (ImGui::Button(("   \ue814   悬浮窗"), { 150.0f * settingGlobalScale,36.0f * settingGlobalScale }))
+						{
+							settingPlugInTab = settingPlugInTabEnum::tabPlugDDB;
+							settingTab = settingTabEnum::tabDemo;
 						}
 					}
 
@@ -4140,8 +4171,8 @@ void SettingMain()
 
 				// 预设
 
-				// 插件
-				case settingTabEnum::tab4:
+				// 演示
+				case settingTabEnum::tabDemo:
 				{
 					ImGui::SetCursorPos({ 170.0f * settingGlobalScale,40.0f * settingGlobalScale });
 					switch (settingPlugInTab)
@@ -4149,13 +4180,13 @@ void SettingMain()
 					case settingPlugInTabEnum::tabPlug1:
 					{
 						PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(243, 243, 243, 255));
-						ImGui::BeginChild("插件", { (750.0f + 30.0f) * settingGlobalScale,608.0f * settingGlobalScale }, false);
+						ImGui::BeginChild("演示", { (750.0f + 30.0f) * settingGlobalScale,608.0f * settingGlobalScale }, false);
 
 						ImGui::SetCursorPosY(10.0f * settingGlobalScale);
 						{
 							ImFontMain->Scale = 0.8f, PushFontNum++, ImGui::PushFont(ImFontMain);
 							PushStyleColorNum++, ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0, 0, 255));
-							ImGui::TextUnformatted("插件");
+							ImGui::TextUnformatted("演示");
 						}
 
 						{
