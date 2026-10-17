@@ -343,7 +343,7 @@ void StateMonitoring()
 		if (stateMode.StateModeSelect == stateMode.StateModeSelectTarget && stateMode.StateModeSelect == stateMode.StateModeSelectEcho) StateMonitoringManipulated = chrono::high_resolution_clock::now();
 		if (chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - StateMonitoringManipulated).count() >= 3000 && !offSignal)
 		{
-			MessageBox(floating_window, L"There is a problem with the state of the whiteboard, click OK to restart AnyThingDraw to try to solve the problem.(#6)\n画板状态出现问题，点击确定重启 亿方万能画笔 以尝试解决问题。(#6)", L"AnyThingDraw Error | 亿方万能画笔错误", MB_OK | MB_SYSTEMMODAL);
+			MessageBox(floating_window, L"画板状态出现问题，点击确定重启 亿方万能画笔 以尝试解决问题。(#6)", L"亿方万能画笔错误", MB_OK | MB_SYSTEMMODAL);
 			RestartProgram();
 
 			return;

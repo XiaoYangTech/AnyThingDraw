@@ -76,10 +76,21 @@ Json::Value setlistVal;
 static void MigrateLegacySetting()
 {
 	error_code ec;
-	auto migrate = [&ec](const wstring& rel)
+
+	// 数据目录就是程序目录时，从曾经用过的 %LOCALAPPDATA%\AnyThingDraw\ 反向迁移；否则沿用安装目录 → 用户数据目录
+	wstring sourceRoot = globalPath;
+	if (userDataPath == globalPath)
+	{
+		wchar_t localAppData[MAX_PATH] = {};
+		if (GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) != 0)
+			sourceRoot = wstring(localAppData) + L"\\AnyThingDraw\\";
+	}
+
+	auto migrate = [&ec, &sourceRoot](const wstring& rel)
 		{
-			wstring oldPath = globalPath + rel;
+			wstring oldPath = sourceRoot + rel;
 			wstring newPath = userDataPath + rel;
+			if (oldPath == newPath) return;
 			if (_waccess(newPath.c_str(), 0) != 0 && _waccess(oldPath.c_str(), 0) == 0)
 			{
 				filesystem::create_directories(filesystem::path(newPath).parent_path(), ec);

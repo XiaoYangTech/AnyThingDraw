@@ -113,12 +113,33 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 	{
 		globalPath = GetCurrentExeDirectory() + L"\\";
 
-		// 用户数据目录：%LOCALAPPDATA%\AnyThingDraw\（安装目录受保护/只读时数据仍可正常读写）
+		// 用户数据目录：优先程序目录（便携、绿色版行为）；仅在程序目录不可写（如 Program Files）时回退 %LOCALAPPDATA%
 		{
-			wchar_t localAppData[MAX_PATH] = {};
-			if (GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) != 0)
-				userDataPath = wstring(localAppData) + L"\\AnyThingDraw\\";
-			else userDataPath = globalPath;
+			wstring localAppDataPath;
+			{
+				wchar_t localAppData[MAX_PATH] = {};
+				if (GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) != 0)
+					localAppDataPath = wstring(localAppData) + L"\\AnyThingDraw\\";
+			}
+
+			bool programDirWritable = false;
+			{
+				error_code ec;
+				const wstring probeDir = globalPath + L"opt";
+				filesystem::create_directories(probeDir, ec);
+
+				const wstring probeFile = probeDir + L"\\.write_test";
+				HANDLE probeHandle = CreateFileW(probeFile.c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_TEMPORARY, NULL);
+				if (probeHandle != INVALID_HANDLE_VALUE)
+				{
+					CloseHandle(probeHandle);
+					DeleteFileW(probeFile.c_str());
+					programDirWritable = true;
+				}
+			}
+
+			if (programDirWritable || localAppDataPath.empty()) userDataPath = globalPath;
+			else userDataPath = localAppDataPath;
 
 			error_code ec;
 			filesystem::create_directories(userDataPath, ec);
@@ -127,7 +148,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 		wstring appName = GetCurrentExeName();
 		if (!isAsciiPrintable(appName))
 		{
-			MessageBox(NULL, L"The file name of this software can only contain English characters. Please rename and restart the software.(#3)\n此软件文件名称只能包含英文字符，请重命名后重启软件。(#3)", L"AnyThingDraw Tips | 亿方万能画笔提示", MB_SYSTEMMODAL | MB_OK);
+			MessageBox(NULL, L"此软件文件名称只能包含英文字符，请重命名后重启软件。(#3)", L"亿方万能画笔提示", MB_SYSTEMMODAL | MB_OK);
 			return 0;
 		}
 
@@ -194,7 +215,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			DWORD lastError = GetLastError();
 			if (launchMutex != NULL && lastError == ERROR_ALREADY_EXISTS)
 			{
-				MessageBox(NULL, L"AnyThingDraw is already running. If not, you need to end the relevant process and reopen the program.\n亿方万能画笔 已经运行。如果没有则需要结束相关进程后重新打开程序。", L"AnyThingDraw Tips | 亿方万能画笔提示", MB_SYSTEMMODAL | MB_OK);
+				MessageBox(NULL, L"亿方万能画笔 已经运行。如果没有则需要结束相关进程后重新打开程序。", L"亿方万能画笔提示", MB_SYSTEMMODAL | MB_OK);
 
 				return 0;
 			}
@@ -778,7 +799,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
 		// 读取配置
 		{
-			if (_waccess((globalPath + L"opt\\deploy.json").c_str(), 4) == -1)
+			if (_waccess((userDataPath + L"opt\\deploy.json").c_str(), 4) == -1)
 			{
 				ATDrawLogger->warn("[主线程][ATDrawMain] 配置信息不存在");
 

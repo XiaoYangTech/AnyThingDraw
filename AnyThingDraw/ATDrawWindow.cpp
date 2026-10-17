@@ -66,7 +66,7 @@ void TopWindow()
 	{
 		ATDrawLogger->warn("[窗口置顶线程][TopWindow] 等待窗口初次绘制超时");
 
-		if (LaunchState::warnTry) 	MessageBox(NULL, L"Program unexpected exit: The program window creation failed or was intercepted. Please restart the software and try again.(#5)\n程序意外退出：程序窗口创建失败或被拦截，请重启软件重试。(#5)", L"AnyThingDraw Tips | 亿方万能画笔提示", MB_SYSTEMMODAL | MB_OK);
+		if (LaunchState::warnTry) 	MessageBox(NULL, L"程序意外退出：程序窗口创建失败或被拦截，请重启软件重试。(#5)", L"亿方万能画笔提示", MB_SYSTEMMODAL | MB_OK);
 		else ShellExecuteW(NULL, NULL, GetCurrentExePath().c_str(), L"-WarnTry", NULL, SW_SHOWNORMAL);
 
 		exit(0);

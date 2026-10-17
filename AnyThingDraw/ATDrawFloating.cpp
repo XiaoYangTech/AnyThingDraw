@@ -4942,7 +4942,7 @@ void MouseInteraction()
 
 					if (m.message == WM_RBUTTONDOWN && setlist.RightClickClose)
 					{
-						if (MessageBox(floating_window, L"Whether to turn off AnyThingDraw?\n是否关闭 亿方万能画笔？", L"AnyThingDraw Tips | 亿方万能画笔提示", MB_OKCANCEL | MB_SYSTEMMODAL) == 1) CloseProgram();
+						if (MessageBox(floating_window, L"是否关闭 亿方万能画笔？", L"亿方万能画笔提示", MB_OKCANCEL | MB_SYSTEMMODAL) == 1) CloseProgram();
 						hiex::flushmessage_win32(EM_MOUSE, floating_window);
 					}
 				}
@@ -4996,7 +4996,7 @@ void MouseInteraction()
 
 					if (m.message == WM_RBUTTONDOWN && setlist.RightClickClose)
 					{
-						if (MessageBox(floating_window, L"Whether to turn off AnyThingDraw?\n是否关闭 亿方万能画笔？", L"AnyThingDraw Tips | 亿方万能画笔提示", MB_OKCANCEL | MB_SYSTEMMODAL) == 1) CloseProgram();
+						if (MessageBox(floating_window, L"是否关闭 亿方万能画笔？", L"亿方万能画笔提示", MB_OKCANCEL | MB_SYSTEMMODAL) == 1) CloseProgram();
 						hiex::flushmessage_win32(EM_MOUSE, floating_window);
 					}
 				}

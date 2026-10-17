@@ -249,9 +249,11 @@ public:
 	CheckEndShowClass()
 	{
 		isChecking = false;
+		preConfirmed = false;
 	}
 public:
 	ATDrawAtomic<bool> isChecking;
+	bool preConfirmed;
 	bool Check();
 };
 extern CheckEndShowClass CheckEndShow;

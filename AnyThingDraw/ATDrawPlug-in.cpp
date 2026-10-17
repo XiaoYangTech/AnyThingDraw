@@ -547,6 +547,15 @@ void GetPptState()
 
 void NextPptSlides(int check)
 {
+	// 最后一页再翻页会导致放映结束：若正在绘制，先询问；取消则不发送翻页指令
+	if (PptInfoState.TotalPage != -1 && PptInfoState.CurrentPage != -1
+		&& PptInfoState.CurrentPage == PptInfoState.TotalPage
+		&& stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && penetrate.select == false)
+	{
+		if (MessageBox(floating_window, L"当前处于绘制模式，继续结束放映将会清空画布内容。\n确定结束放映？", L"亿方万能画笔提示", MB_SYSTEMMODAL | MB_OKCANCEL) != IDOK) return;
+		CheckEndShow.preConfirmed = true;
+	}
+
 	auto pptCom = GetPptComSnapshot();
 	if (pptCom == nullptr) return;
 
@@ -4296,7 +4305,7 @@ void PPTLinkageMain()
 
 	// 读取 ppt 配置
 	{
-		if (_waccess((globalPath + L"opt\\pptcom_configuration.json").c_str(), 4) == 0) PptComReadSetting();
+		if (_waccess((userDataPath + L"opt\\pptcom_configuration.json").c_str(), 4) == 0) PptComReadSetting();
 		PptComWriteSetting();
 	}
 	// 检查相关注册表项目
@@ -4401,7 +4410,22 @@ bool CheckEndShowClass::Check()
 		isChecking = true;
 		});
 
-	bool ret = (MessageBox(floating_window, L"Currently in drawing mode, continuing to end will clear the canvas.\nAre you sure you want to end the presentation?\n当前处于绘制模式，继续结束放映将会清空画布内容。\n确定结束放映？", L"AnyThingDraw Tips | 亿方万能画笔提示", MB_SYSTEMMODAL | MB_OKCANCEL) == 1);
+	// 已在 NextPptSlides 里预先询问并确认
+	if (preConfirmed)
+	{
+		preConfirmed = false;
+		isChecking = false;
+		return true;
+	}
+
+	// PPT 已经退出放映：此时再询问没有意义，直接清理画布
+	if (PptInfoState.TotalPage != -1 && PptInfoState.CurrentPage == -1)
+	{
+		isChecking = false;
+		return true;
+	}
+
+	bool ret = (MessageBox(floating_window, L"当前处于绘制模式，继续结束放映将会清空画布内容。\n确定结束放映？", L"亿方万能画笔提示", MB_SYSTEMMODAL | MB_OKCANCEL) == IDOK);
 
 	isChecking = false;
 	return ret;
