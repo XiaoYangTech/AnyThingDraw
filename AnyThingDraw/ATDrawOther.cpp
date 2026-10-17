@@ -235,89 +235,103 @@ bool QueryStartupState(wstring path, const wstring& nameclass)
 	return (_wcsicmp(regValue, path.c_str()) == 0 || _wcsicmp(regValue, strPathWithQuotes.c_str()) == 0);
 }
 
-#include <vector>
 
-// ---- 自绘 OK/Cancel 对话框：左「取消」右「确定」，不依赖 comctl32 v6 / 清单 ----
+// ---- 手写窗口实现的自定义 OK/Cancel 对话框：左「取消」右「确定」 ----
 struct ATCustomDialogParams
 {
 	const wchar_t* title;
 	const wchar_t* text;
+	int result;
 };
-static void ATDlgWord(std::vector<BYTE>& b, WORD v)
+static LRESULT CALLBACK ATDialogWndProc(HWND h, UINT m, WPARAM w, LPARAM l)
 {
-	b.push_back(static_cast<BYTE>(v & 0xFF));
-	b.push_back(static_cast<BYTE>(v >> 8));
-}
-static void ATDlgDword(std::vector<BYTE>& b, DWORD v)
-{
-	b.push_back(static_cast<BYTE>(v & 0xFF));
-	b.push_back(static_cast<BYTE>((v >> 8) & 0xFF));
-	b.push_back(static_cast<BYTE>((v >> 16) & 0xFF));
-	b.push_back(static_cast<BYTE>((v >> 24) & 0xFF));
-}
-static void ATDlgAlign(std::vector<BYTE>& b)
-{
-	while (b.size() % 4 != 0) b.push_back(0);
-}
-static void ATDlgItem(std::vector<BYTE>& b, DWORD style, short x, short y, short cx, short cy, WORD id, WORD cls, const wchar_t* text)
-{
-	ATDlgAlign(b);
-	ATDlgDword(b, style);
-	ATDlgDword(b, 0);
-	ATDlgWord(b, static_cast<WORD>(x)); ATDlgWord(b, static_cast<WORD>(y));
-	ATDlgWord(b, static_cast<WORD>(cx)); ATDlgWord(b, static_cast<WORD>(cy));
-	ATDlgWord(b, id);
-	ATDlgWord(b, 0xFFFF); ATDlgWord(b, cls);
-	for (const wchar_t* p = text; ; ++p)
+	if (m == WM_CREATE)
 	{
-		ATDlgWord(b, static_cast<WORD>(*p));
-		if (*p == 0) break;
+		CREATESTRUCTW* cs = reinterpret_cast<CREATESTRUCTW*>(l);
+		SetWindowLongPtrW(h, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(cs->lpCreateParams));
+		return 0;
 	}
-}
-static INT_PTR CALLBACK ATDlgProc(HWND hDlg, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-	switch (msg)
+	ATCustomDialogParams* p = reinterpret_cast<ATCustomDialogParams*>(GetWindowLongPtrW(h, GWLP_USERDATA));
+	switch (m)
 	{
-	case WM_INITDIALOG:
-	{
-		ATCustomDialogParams* p = reinterpret_cast<ATCustomDialogParams*>(lParam);
-		SetWindowTextW(hDlg, p->title);
-		SetDlgItemTextW(hDlg, 1000, p->text);
-		HWND owner = GetParent(hDlg);
-		RECT ro = {}, rd = {};
-		GetWindowRect(owner ? owner : hDlg, &ro);
-		GetWindowRect(hDlg, &rd);
-		int w = rd.right - rd.left, h = rd.bottom - rd.top;
-		int x = ro.left + ((ro.right - ro.left) - w) / 2;
-		int y = ro.top + ((ro.bottom - ro.top) - h) / 2;
-		SetWindowPos(hDlg, NULL, x, y, 0, 0, SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
-		return TRUE;
-	}
 	case WM_COMMAND:
-		if (LOWORD(wParam) == IDOK) { EndDialog(hDlg, IDOK); return TRUE; }
-		if (LOWORD(wParam) == IDCANCEL) { EndDialog(hDlg, IDCANCEL); return TRUE; }
+		if (p)
+		{
+			if (LOWORD(w) == IDOK) { p->result = 1; DestroyWindow(h); return 0; }
+			if (LOWORD(w) == IDCANCEL) { p->result = 0; DestroyWindow(h); return 0; }
+		}
 		break;
 	case WM_CLOSE:
-		EndDialog(hDlg, IDCANCEL);
-		return TRUE;
+		if (p) p->result = 0;
+		DestroyWindow(h);
+		return 0;
 	}
-	return FALSE;
+	return DefWindowProcW(h, m, w, l);
 }
 int ShowATOKCancelDialog(HWND owner, const wchar_t* text, const wchar_t* title)
 {
-	ATCustomDialogParams params = { title, text };
-	std::vector<BYTE> tpl;
-	ATDlgDword(tpl, DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU);
-	ATDlgDword(tpl, 0);
-	ATDlgWord(tpl, 3);			// 3 个控件
-	ATDlgWord(tpl, 0); ATDlgWord(tpl, 0);
-	ATDlgWord(tpl, 220); ATDlgWord(tpl, 80);
-	ATDlgWord(tpl, 0);			// 无菜单
-	ATDlgWord(tpl, 0);			// 默认对话框类
-	ATDlgWord(tpl, 0);			// 无标题（运行时设置）
-	ATDlgItem(tpl, WS_CHILD | WS_VISIBLE | SS_LEFT, 8, 8, 204, 40, 1000, 0x0082, L"");
-	ATDlgItem(tpl, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON, 100, 56, 50, 16, IDOK, 0x0080, L"确定");
-	ATDlgItem(tpl, WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_PUSHBUTTON, 40, 56, 50, 16, IDCANCEL, 0x0080, L"取消");
-	INT_PTR r = DialogBoxIndirectParamW(GetModuleHandleW(NULL), reinterpret_cast<LPCDLGTEMPLATEW>(tpl.data()), owner, ATDlgProc, reinterpret_cast<LPARAM>(&params));
-	return r == IDOK ? 1 : 0;
+	static bool registered = false;
+	if (!registered)
+	{
+		WNDCLASSW wc = {};
+		wc.lpfnWndProc = ATDialogWndProc;
+		wc.hInstance = GetModuleHandleW(NULL);
+		wc.hCursor = LoadCursorW(NULL, IDC_ARROW);
+		wc.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_BTNFACE + 1);
+		wc.lpszClassName = L"ATCustomDialogClass";
+		RegisterClassW(&wc);
+		registered = true;
+	}
+
+	HDC dc = GetDC(NULL);
+	int dpi = dc ? GetDeviceCaps(dc, LOGPIXELSX) : 96;
+	if (dc) ReleaseDC(NULL, dc);
+	auto S = [dpi](int v) { return MulDiv(v, dpi, 96); };
+
+	RECT ro = {};
+	if (owner) GetWindowRect(owner, &ro);
+	int w = S(440), h = S(200);
+	int x = ro.left + ((ro.right - ro.left) - w) / 2;
+	int y = ro.top + ((ro.bottom - ro.top) - h) / 2;
+
+	ATCustomDialogParams params = {};
+	params.title = title;
+	params.text = text;
+	params.result = 0;
+
+	HWND dlg = CreateWindowExW(WS_EX_DLGMODALFRAME, L"ATCustomDialogClass", title,
+		WS_POPUP | WS_CAPTION | WS_SYSMENU, x, y, w, h, owner, NULL, GetModuleHandleW(NULL), &params);
+	if (!dlg) return 0;
+
+	HFONT font = static_cast<HFONT>(GetStockObject(DEFAULT_GUI_FONT));
+	auto make = [&](const wchar_t* cls, const wchar_t* txt, DWORD style, int px, int py, int pw, int ph, int id) -> HWND
+	{
+		HWND c = CreateWindowExW(0, cls, txt, WS_CHILD | WS_VISIBLE | style,
+			S(px), S(py), S(pw), S(ph), dlg, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(NULL), NULL);
+		if (c) SendMessageW(c, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+		return c;
+	};
+
+	make(L"STATIC", text, SS_LEFT, 20, 18, 400, 90, 1000);
+	HWND okBtn = make(L"BUTTON", L"确定", WS_TABSTOP | BS_DEFPUSHBUTTON, 250, 130, 90, 30, IDOK);
+	make(L"BUTTON", L"取消", WS_TABSTOP | BS_PUSHBUTTON, 140, 130, 90, 30, IDCANCEL);
+
+	if (owner) EnableWindow(owner, FALSE);
+	ShowWindow(dlg, SW_SHOWNORMAL);
+	UpdateWindow(dlg);
+	if (okBtn) SetFocus(okBtn);
+
+	while (IsWindow(dlg))
+	{
+		MSG msg;
+		if (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			if (msg.message == WM_QUIT) break;
+			TranslateMessage(&msg);
+			DispatchMessageW(&msg);
+		}
+		else Sleep(5);
+	}
+	if (owner) EnableWindow(owner, TRUE);
+	return params.result;
 }
