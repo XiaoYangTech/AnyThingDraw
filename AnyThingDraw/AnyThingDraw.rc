@@ -1,4 +1,4 @@
-// Microsoft Visual C++ generated resource script.
+﻿// Microsoft Visual C++ generated resource script.
 //
 #pragma code_page(65001)
 
@@ -220,7 +220,7 @@ BEGIN
         BLOCK "080404b0"
         BEGIN
             VALUE "CompanyName", "InspireWorks（亿方运维）"
-            VALUE "FileVersion", "1.0.0.1"
+            VALUE "FileVersion", "1.1.0.0"
             VALUE "InternalName", "AnyThingDraw"
             VALUE "LegalCopyright", "Copyright © 2023-2025 AlanCRL（陈润林）工作室; Modifications Copyright © 2026 InspireWorks（亿方运维）"
             VALUE "ProductName", "AnyThingDraw"

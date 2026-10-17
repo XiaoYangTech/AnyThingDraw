@@ -26,7 +26,7 @@ Unicode true
   !define ARCH "x64"
 !endif
 !ifndef APPVERSION
-  !define APPVERSION "1.0.0"
+  !define APPVERSION "1.1.0"
 !endif
 !ifndef SRCDIR
   !define SRCDIR "."

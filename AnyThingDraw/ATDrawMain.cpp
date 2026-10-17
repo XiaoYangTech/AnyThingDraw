@@ -50,7 +50,7 @@ import AnyThingDraw.Thread.Status;
 #pragma comment(lib, "netapi32.lib")
 
 wstring buildTime = __DATE__ L" " __TIME__;		// 构建时间
-wstring editionDate = L"1.0.0";
+wstring editionDate = L"1.1.0";
 wstring deviceKey;				// 程序发布日期
 
 wstring userId;									// 用户GUID
