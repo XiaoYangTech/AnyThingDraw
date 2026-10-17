@@ -9,8 +9,6 @@ public:
 	inline static bool warnTry = false;
 	inline static bool crashTry = false;
 
-	inline static bool superTop = false;
-	inline static wstring superTopVal = L"";
 
 	inline static wstring commandLine = L"";
 private:

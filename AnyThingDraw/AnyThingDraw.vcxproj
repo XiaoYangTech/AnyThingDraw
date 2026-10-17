@@ -529,8 +529,6 @@
     <ClInclude Include="ATDrawTime.h" />
     <ClInclude Include="ATDrawUpdate.h" />
     <ClInclude Include="ATDrawWindow.h" />
-    <ClInclude Include="SuperTop\ATDrawSuperTop.h" />
-    <ClInclude Include="SuperTop\ATDrawToken.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="additional\hashlib++\hl_md5.cpp" />
@@ -617,7 +615,6 @@
     <ClCompile Include="AnyThingDraw\Other\ATDrawInputs.cpp" />
     <ClCompile Include="AnyThingDraw\Thread\Thread.Status.cppm" />
     <ClCompile Include="Launch\ATDrawLaunchState.cpp" />
-    <ClCompile Include="SuperTop\ATDrawSuperTop.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AnyThingDraw.rc" />

@@ -273,21 +273,7 @@ bool ReadSetting()
 						ddbInteractionSetList.intercept.SeewoDesktopDrawingFloating = setlistVal["PlugIn"]["DesktopDrawpadBlocker"]["Intercept"]["SeewoDesktopDrawingFloating"].asBool();
 				}
 			}
-			if (setlistVal["PlugIn"].isMember("ShortcutAssistant") && setlistVal["PlugIn"]["ShortcutAssistant"].isObject())
-			{
-				if (setlistVal["PlugIn"]["ShortcutAssistant"].isMember("CorrectLnk") && setlistVal["PlugIn"]["ShortcutAssistant"]["CorrectLnk"].isBool())
-					setlist.shortcutAssistant.correctLnk = setlistVal["PlugIn"]["ShortcutAssistant"]["CorrectLnk"].asBool();
-				if (setlistVal["PlugIn"]["ShortcutAssistant"].isMember("CreateLnk") && setlistVal["PlugIn"]["ShortcutAssistant"]["CreateLnk"].isBool())
-					setlist.shortcutAssistant.createLnk = setlistVal["PlugIn"]["ShortcutAssistant"]["CreateLnk"].asBool();
-			}
 
-			if (setlistVal["PlugIn"].isMember("SuperTop") && setlistVal["PlugIn"]["SuperTop"].isObject())
-			{
-				if (setlistVal["PlugIn"]["SuperTop"].isMember("Enable") && setlistVal["PlugIn"]["SuperTop"]["Enable"].isBool())
-					setlist.plugInSetting.superTop.enable = setlistVal["PlugIn"]["SuperTop"]["Enable"].asBool();
-				if (setlistVal["PlugIn"]["SuperTop"].isMember("Indicator") && setlistVal["PlugIn"]["SuperTop"]["Indicator"].isBool())
-					setlist.plugInSetting.superTop.indicator = setlistVal["PlugIn"]["SuperTop"]["Indicator"].asBool();
-			}
 		}
 		if (setlistVal.isMember("Component") && setlistVal["Component"].isObject())
 		{
@@ -320,60 +306,6 @@ bool ReadSetting()
 					if (setlistVal["Component"]["ShortcutButton"]["Keyboard"].isMember("KeyboardAltF4") && setlistVal["Component"]["ShortcutButton"]["Keyboard"]["KeyboardAltF4"].isBool())
 						setlist.component.shortcutButton.keyboard.keyboardAltF4 = setlistVal["Component"]["ShortcutButton"]["Keyboard"]["KeyboardAltF4"].asBool();
 				}
-			}
-		}
-	}
-	else return false;
-
-	return true;
-}
-bool ReadSettingMini()
-{
-	HANDLE fileHandle = NULL;
-	if (!OccupyFileForRead(&fileHandle, globalPath + L"opt\\deploy.json"))
-	{
-		UnOccupyFile(&fileHandle);
-		return false;
-	}
-
-	LARGE_INTEGER fileSize;
-	if (!GetFileSizeEx(fileHandle, &fileSize))
-	{
-		UnOccupyFile(&fileHandle);
-		return false;
-	}
-
-	DWORD dwSize = static_cast<DWORD>(fileSize.QuadPart);
-	string jsonContent = string(dwSize, '\0');
-
-	DWORD bytesRead = 0;
-	if (SetFilePointer(fileHandle, 0, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
-	{
-		UnOccupyFile(&fileHandle);
-		return false;
-	}
-	if (!ReadFile(fileHandle, &jsonContent[0], dwSize, &bytesRead, NULL) || bytesRead != dwSize)
-	{
-		UnOccupyFile(&fileHandle);
-		return false;
-	}
-
-	if (jsonContent.compare(0, 3, "\xEF\xBB\xBF") == 0) jsonContent = jsonContent.substr(3);
-	UnOccupyFile(&fileHandle);
-
-	istringstream jsonContentStream(jsonContent);
-	Json::CharReaderBuilder readerBuilder;
-	Json::Value updateVal;
-	string jsonErr;
-
-	if (Json::parseFromStream(readerBuilder, jsonContentStream, &updateVal, &jsonErr))
-	{
-		if (updateVal.isMember("PlugIn") && updateVal["PlugIn"].isObject())
-		{
-			if (updateVal["PlugIn"].isMember("SuperTop") && updateVal["PlugIn"]["SuperTop"].isObject())
-			{
-				if (updateVal["PlugIn"]["SuperTop"].isMember("Enable") && updateVal["PlugIn"]["SuperTop"]["Enable"].isBool())
-					setlist.plugInSetting.superTop.enable = updateVal["PlugIn"]["SuperTop"]["Enable"].asBool();
 			}
 		}
 	}
@@ -480,13 +412,9 @@ bool WriteSetting()
 				}
 			}
 			{
-				setlistVal["PlugIn"]["ShortcutAssistant"]["CorrectLnk"] = Json::Value(setlist.shortcutAssistant.correctLnk);
-				setlistVal["PlugIn"]["ShortcutAssistant"]["CreateLnk"] = Json::Value(setlist.shortcutAssistant.createLnk);
 			}
 
 			{
-				setlistVal["PlugIn"]["SuperTop"]["Enable"] = Json::Value(setlist.plugInSetting.superTop.enable);
-				setlistVal["PlugIn"]["SuperTop"]["Indicator"] = Json::Value(setlist.plugInSetting.superTop.indicator);
 			}
 		}
 		{

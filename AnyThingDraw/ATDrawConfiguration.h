@@ -117,25 +117,12 @@ struct SetListStruct
 #pragma endregion
 
 #pragma region 插件
-	struct
-	{
-		bool createLnk, correctLnk;
-	}shortcutAssistant;
 
-	struct
-	{
-		struct
-		{
-			ATDrawAtomic<bool> enable;
-			ATDrawAtomic<bool> indicator;
-		}superTop;
-	}plugInSetting;
 #pragma endregion
 };
 extern SetListStruct setlist;
 extern shared_mutex setlistUpdateMutex;
 bool ReadSetting();
-bool ReadSettingMini();
 bool WriteSetting();
 
 struct PptComSetListStruct

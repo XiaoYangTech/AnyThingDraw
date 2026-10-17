@@ -509,7 +509,6 @@ void DrawScreen()
 			atdrawLoadImage(&floating_icon[17], L"PNG", L"icon17", 20, 20, true);
 			atdrawLoadImage(&floating_icon[20], L"PNG", L"icon20", 20, 20, true);
 
-			atdrawLoadImage(&floating_icon[30], L"PNG", L"icon21"); // SuperTop
 
 			atdrawLoadImage(&floating_icon[23], L"PNG", L"CustomizeIco3", 40, 40, true); // desktop
 			atdrawLoadImage(&floating_icon[24], L"PNG", L"CustomizeIco4", 40, 40, true); // explorer
@@ -4723,12 +4722,6 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 					}
 					//时钟表盘
 
-					// SuperTop 指示器
-					if (setlist.plugInSetting.superTop.indicator)
-					{
-						if (hasSuperTop)
-							hiex::TransparentImage(&background, int(UIControl[L"Ellipse/Ellipse1/x"].v + 70), int(UIControl[L"Ellipse/Ellipse1/y"].v), &floating_icon[30], int(UIControl[L"Image/Sign1/transparency"].v));
-					}
 				}
 
 				if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && (int)state == 1)

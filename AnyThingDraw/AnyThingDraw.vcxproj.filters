@@ -750,10 +750,8 @@
     <ClInclude Include="CrashHandler\CrashHandler.h">
       <Filter>头文件\CrashHandler</Filter>
     </ClInclude>
-    <ClInclude Include="SuperTop\IdtSuperTop.h">
       <Filter>头文件\SuperTop</Filter>
     </ClInclude>
-    <ClInclude Include="SuperTop\IdtToken.h">
       <Filter>头文件\SuperTop</Filter>
     </ClInclude>
     <ClInclude Include="AnyThingDraw\Json\IdtJson.h">
@@ -1016,7 +1014,6 @@
     <ClCompile Include="CrashHandler\CrashHandler.cpp">
       <Filter>源文件\CrashHandler</Filter>
     </ClCompile>
-    <ClCompile Include="SuperTop\IdtSuperTop.cpp">
       <Filter>源文件\SuperTop</Filter>
     </ClCompile>
     <ClCompile Include="AnyThingDraw\Load\IdtFontLoad.cpp">

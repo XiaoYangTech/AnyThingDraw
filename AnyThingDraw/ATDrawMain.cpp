@@ -175,7 +175,6 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 	// 防止重复启动
 	{
 		// 相关标识
-		bool superTopComplete = false;
 
 		{
 			vector<wstring> args = CustomSplit::Run(GetCommandLineW(), L'*');
@@ -190,26 +189,13 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 				if (commandLine == L"-Restart") LaunchState::restart = true;
 				else if (commandLine == L"-WarnTry") LaunchState::warnTry = true;
 				else if (commandLine == L"-CrashTry") LaunchState::crashTry = true;
-				else if (commandLine == L"-SuperTopComplete") superTopComplete = true, addCommandLine = false;
-				else if (commandLine.substr(0, 9) == L"-SuperTop")
-				{
-					addCommandLine = false;
-
-					wregex pattern(LR"(^[^*]*\*([^*]+)\*[^*]*$)");
-					wsmatch matches;
-					if (regex_match(commandLine, matches, pattern))
-					{
-						SurperTopMain(matches[1].str());
-						exit(0);
-					}
-				}
 
 				if (addCommandLine) LaunchState::commandLine += commandLine + L" ";
 			}
 		}
 
 	#ifdef ATDRAW_RELEASE
-		if (!LaunchState::restart && !LaunchState::warnTry && !LaunchState::crashTry && !superTopComplete)
+		if (!LaunchState::restart && !LaunchState::warnTry && !LaunchState::crashTry)
 		{
 			wstring currentExeDirectory = GetCurrentExeDirectory();
 			{
@@ -543,160 +529,6 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 		}
 	}
 
-	// AnyThingDrawSuperTop 阶段
-	bool SuperTopFailSignal = false;
-	if (_waccess((globalPath + L"opt\\deploy.json").c_str(), 4) == 0)
-	{
-		ReadSettingMini();
-
-		HANDLE proc_self = GetCurrentProcess();
-		HANDLE tok_self;
-		OpenProcessToken(proc_self, TOKEN_ALL_ACCESS, &tok_self);
-
-		if (setlist.plugInSetting.superTop.enable && !hasUiAccess(tok_self))
-		{
-			while (true)
-			{
-				bool hasExistsFaild = false;
-
-				error_code ec;
-				if (filesystem::exists(globalPath + L"superTop_try.signal", ec))
-				{
-					string dateContent;
-					{
-						HANDLE fileHandle = NULL;
-						if (!OccupyFileForRead(&fileHandle, globalPath + L"superTop_try.signal"))
-						{
-							UnOccupyFile(&fileHandle);
-							break;
-						}
-
-						LARGE_INTEGER fileSize;
-						if (!GetFileSizeEx(fileHandle, &fileSize))
-						{
-							UnOccupyFile(&fileHandle);
-							break;
-						}
-
-						DWORD dwSize = static_cast<DWORD>(fileSize.QuadPart);
-						dateContent = string(dwSize, '\0');
-
-						DWORD bytesRead = 0;
-						if (SetFilePointer(fileHandle, 0, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
-						{
-							UnOccupyFile(&fileHandle);
-							break;
-						}
-						if (!ReadFile(fileHandle, &dateContent[0], dwSize, &bytesRead, NULL) || bytesRead != dwSize)
-						{
-							UnOccupyFile(&fileHandle);
-							break;
-						}
-
-						if (dateContent.compare(0, 3, "\xEF\xBB\xBF") == 0) dateContent = dateContent.substr(3);
-						UnOccupyFile(&fileHandle);
-					}
-
-					double diff;
-					{
-						tm tm = {};
-						int year, month, day, hour, minute, second;
-						if (sscanf_s(dateContent.c_str(), "%d-%d-%d %d:%d:%d", &year, &month, &day, &hour, &minute, &second) != 6)
-							break;
-
-						tm.tm_year = year - 1900; // 年份从1900开始
-						tm.tm_mon = month - 1;    // 月份0-11
-						tm.tm_mday = day;
-						tm.tm_hour = hour;
-						tm.tm_min = minute;
-						tm.tm_sec = second;
-						tm.tm_isdst = -1;         // 让系统自动判断夏令时
-
-						time_t old_time = mktime(&tm);
-						time_t new_time = time(nullptr);
-
-						diff = difftime(new_time, old_time);
-					}
-
-					// 如果小于 30s 则视为同一次尝试，此时宣告尝试失败
-					if (diff <= 30)
-					{
-						SuperTopFailSignal = true;
-						break;
-					}
-					else hasExistsFaild = true;
-				}
-
-				{
-					if (!filesystem::exists(globalPath + L"superTop_try.signal", ec) || hasExistsFaild)
-					{
-						string date;
-						{
-							auto now = chrono::system_clock::now();
-							time_t t = chrono::system_clock::to_time_t(now);
-							tm tm; localtime_s(&tm, &t);
-
-							ostringstream oss;
-							oss << put_time(&tm, "%Y-%m-%d %H:%M:%S");
-							date = oss.str();
-						}
-
-						bool isSuccess = false;
-						while (true)
-						{
-							HANDLE fileHandle = NULL;
-							if (!OccupyFileForWrite(&fileHandle, globalPath + L"superTop_try.signal"))
-							{
-								UnOccupyFile(&fileHandle);
-								break;
-							}
-							if (SetFilePointer(fileHandle, 0, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
-							{
-								UnOccupyFile(&fileHandle);
-								break;
-							}
-							if (!SetEndOfFile(fileHandle))
-							{
-								UnOccupyFile(&fileHandle);
-								break;
-							}
-
-							Json::StreamWriterBuilder writerBuilder;
-							string dateContent = "\xEF\xBB\xBF" + date;
-
-							DWORD bytesWritten = 0;
-							if (!WriteFile(fileHandle, dateContent.data(), static_cast<DWORD>(dateContent.size()), &bytesWritten, NULL) || bytesWritten != dateContent.size())
-							{
-								UnOccupyFile(&fileHandle);
-								break;
-							}
-
-							UnOccupyFile(&fileHandle);
-
-							isSuccess = true;
-							break;
-						}
-
-						if (!isSuccess)
-						{
-							HANDLE fileHandle = NULL;
-							OccupyFileForWrite(&fileHandle, globalPath + L"superTop_try.signal");
-							UnOccupyFile(&fileHandle);
-						}
-					}
-
-					LaunchSurperTop(LaunchState::commandLine);
-				}
-				break;
-			}
-		}
-
-		error_code ec;
-		filesystem::remove(globalPath + L"superTop_try.signal", ec);
-
-		hasSuperTop = hasUiAccess(tok_self);
-	}
-
 	// 用户ID获取
 	{
 		userId = utf8ToUtf16(getDeviceGUID());
@@ -921,12 +753,8 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			// 插件
 			{
 				{
-					setlist.shortcutAssistant.correctLnk = true;
-					setlist.shortcutAssistant.createLnk = false;
 				}
 				{
-					setlist.plugInSetting.superTop.enable = false;
-					setlist.plugInSetting.superTop.indicator = true;
 				}
 			}
 			// 组件
@@ -1011,21 +839,11 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			// 崩溃选项设定
 			CrashHandler::SetFlag(setlist.regularSetting.teachingSafetyMode);
 		}
-		// 配置修正
-		{
-			if (SuperTopFailSignal)
-			{
-				setlist.plugInSetting.superTop.enable = false;
-				WriteSetting();
-			}
-		}
 
 		ATDrawLogger->info("[主线程][ATDrawMain] 配置信息初始化完成");
 	}
 	// 插件初始化
 	{
-		// 桌面快捷方式初始化
-		shortcutAssistant.SetShortcut();
 		// 启动 DesktopDrawpadBlocker
 		StartDesktopDrawpadBlocker();
 	}
