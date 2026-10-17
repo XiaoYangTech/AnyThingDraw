@@ -1,4 +1,4 @@
-/*
+﻿/*
  * @file		ATDrawMain.cpp
  * @brief		亿方万能画笔项目中心源文件
  * @note		用于初始化亿方万能画笔并调用相关模块
@@ -798,7 +798,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 
 		// 读取配置
 		{
-			if (_waccess((userDataPath + L"opt\\deploy.json").c_str(), 4) == -1)
+			if (_waccess((userDataPath + L"settings.json").c_str(), 4) == -1)
 			{
 				ATDrawLogger->warn("[主线程][ATDrawMain] 配置信息不存在");
 

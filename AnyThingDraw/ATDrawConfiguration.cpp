@@ -1,4 +1,4 @@
-#include "ATDrawConfiguration.h"
+﻿#include "ATDrawConfiguration.h"
 
 #include "ATDrawText.h"
 #include "ATDrawState.h"
@@ -76,6 +76,10 @@ Json::Value setlistVal;
 // 统一设置文件：deploy / pptcom / memory 合并到 userDataPath\settings.json
 static Json::Value LoadUnifiedRoot()
 {
+	// 缓存：写函数会先清空文件再拼内容，必须用清空前的快照，否则每次都读到空
+	static bool loaded = false;
+	static Json::Value cache;
+	if (loaded) return cache;
 	Json::Value root(Json::objectValue);
 	HANDLE h = NULL;
 	if (!OccupyFileForRead(&h, userDataPath + L"settings.json")) return root;
@@ -93,8 +97,11 @@ static Json::Value LoadUnifiedRoot()
 	unique_ptr<Json::CharReader> reader(rb.newCharReader());
 	string errs;
 	Json::Value parsed;
-	if (reader->parse(s.data(), s.data() + s.size(), &parsed, &errs) && parsed.isObject()) return parsed;
-	return root;
+	Json::Value result = root;
+	if (reader->parse(s.data(), s.data() + s.size(), &parsed, &errs) && parsed.isObject()) result = parsed;
+	loaded = true;
+	cache = result;
+	return result;
 }
 static void MergeJsonValue(Json::Value& root, const Json::Value& add)
 {
@@ -127,9 +134,9 @@ static void MergeFileInto(Json::Value& root, const wstring& p)
 // 旧版分散的 json 首次启动时合并进 settings.json
 static void MigrateLegacySetting()
 {
-	if (_waccess((userDataPath + L"settings.json").c_str(), 0) == 0) return;
-
-	Json::Value root(Json::objectValue);
+	Json::Value root = LoadUnifiedRoot();
+	// 已有独立的 deploy 设置键就不再重复迁移（此前可能只写入了 PPT 配置）
+	if (root.isMember("Regular") || root.isMember("Preset") || root.isMember("Component")) return;
 	MergeFileInto(root, globalPath + L"opt\\deploy.json");
 	MergeFileInto(root, globalPath + L"opt\\pptcom_configuration.json");
 	MergeFileInto(root, globalPath + L"AnyThingDraw\\Memory\\memory.json");
