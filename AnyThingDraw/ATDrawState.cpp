@@ -54,6 +54,16 @@ bool SetPenColor(COLORREF targetColor, bool setMemory)
 
 	return true;
 }
+bool eraserClearInProgress = false;
+
+StateModeSelectEnum GetDisplayModeForUi()
+{
+	StateModeSelectEnum mode = stateMode.StateModeSelect;
+	if (eraserClearInProgress && mode == StateModeSelectEnum::ATDrawSelection)
+		return StateModeSelectEnum::ATDrawEraser;
+	return mode;
+}
+
 bool ChangeStateModeToSelection()
 {
 	stateMode.StateModeSelectTarget = StateModeSelectEnum::ATDrawSelection;

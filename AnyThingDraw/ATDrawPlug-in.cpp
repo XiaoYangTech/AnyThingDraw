@@ -2309,20 +2309,26 @@ void PptUI()
 	}
 }
 // 判定前台窗口是否为放映窗口（兼容 WPS 放映进程 wpp.exe 与主框架 wps.exe 跨进程的情况）
-bool IsPptShowForeground()
+enum class PptFocusState
 {
-	if (ppt_show == NULL) return false;
+	Foreground,    // 放映窗口在前台
+	Lost,          // 明确切出（前台是其他窗口）
+	Unknown        // 状态未知（窗口句柄/进程信息暂不可用），不应据此判定切出
+};
+PptFocusState GetPptFocusState()
+{
+	if (ppt_show == NULL) return PptFocusState::Unknown;
 
 	HWND foregroundWindow = GetForegroundWindow();
-	if (foregroundWindow == NULL) return false;
-	if (foregroundWindow == ppt_show) return true;
-	if (GetAncestor(foregroundWindow, GA_ROOT) == GetAncestor(ppt_show, GA_ROOT)) return true;
+	if (foregroundWindow == NULL) return PptFocusState::Unknown;
+	if (foregroundWindow == ppt_show) return PptFocusState::Foreground;
+	if (GetAncestor(foregroundWindow, GA_ROOT) == GetAncestor(ppt_show, GA_ROOT)) return PptFocusState::Foreground;
 
 	DWORD foregroundPid = 0, showPid = 0;
 	GetWindowThreadProcessId(foregroundWindow, &foregroundPid);
 	GetWindowThreadProcessId(ppt_show, &showPid);
-	if (foregroundPid == 0 || showPid == 0) return false;
-	if (foregroundPid == showPid) return true;
+	if (foregroundPid == 0 || showPid == 0) return PptFocusState::Unknown;
+	if (foregroundPid == showPid) return PptFocusState::Foreground;
 
 	wchar_t foregroundName[MAX_PATH] = { 0 }, showName[MAX_PATH] = { 0 };
 	DWORD nameSize = MAX_PATH;
@@ -2339,7 +2345,7 @@ bool IsPptShowForeground()
 		QueryFullProcessImageNameW(showProcess, 0, showName, &nameSize);
 		CloseHandle(showProcess);
 	}
-	if (foregroundName[0] == 0 || showName[0] == 0) return false;
+	if (foregroundName[0] == 0 || showName[0] == 0) return PptFocusState::Unknown;
 
 	wstring foregroundNameLower = foregroundName, showNameLower = showName;
 	std::transform(foregroundNameLower.begin(), foregroundNameLower.end(), foregroundNameLower.begin(), ::towlower);
@@ -2351,13 +2357,20 @@ bool IsPptShowForeground()
 	bool showIsWpp = showNameLower.find(L"wpp.exe") != wstring::npos;
 
 	// 前台与放映同属 WPS 套件（wpp.exe 放映 / wps.exe 主框架）时视为放映前台
-	return (showIsWpp && foregroundIsWps) || (showIsWps && foregroundIsWpp);
+	if ((showIsWpp && foregroundIsWps) || (showIsWps && foregroundIsWpp)) return PptFocusState::Foreground;
+
+	// 前台是明确的其它进程窗口 → 切出放映
+	return PptFocusState::Lost;
 }
 void PptInfo()
 {
 	AnyThingDraw::Thread::StatusGuard guard("PptInfo");
 
 	bool Initialization = false; // 控件初始化完毕
+	int foregroundSeen = 0;      // 已观测到放映窗口在前台的次数（armed 判定）
+	int focusLostCount = 0;      // 连续判定切出的次数（防抖）
+	chrono::steady_clock::time_point initTime; // 初始化时刻（启动冷却）
+
 	for (; !offSignal;)
 	{
 		// Ppt 信息监测 | 控件信息加载
@@ -2374,6 +2387,9 @@ void PptInfo()
 
 			if (ppt_software.find(L"WPS") != ppt_software.npos) ppt_software = L"WPS";
 			else ppt_software = L"PowerPoint";
+
+			foregroundSeen = 0, focusLostCount = 0;
+			initTime = chrono::steady_clock::now();
 
 			Initialization = true;
 		}
@@ -2395,12 +2411,31 @@ void PptInfo()
 		}
 		else if (Initialization)
 		{
-			// 前台窗口不是放映窗口：通过 COM 组件结束放映，之后按正常放映结束流程收尾
-			if (ppt_show == NULL) ppt_show = GetPptShow(); // 补取放映窗口句柄，避免初始化竞态导致误判
-			if (!IsPptShowForeground() && pptComSetlist.exitShowOnFocusLost)
+			// 焦点检测：仅当已观测到放映前台、且连续多次确认切出后才结束放映，
+			// 避免 WPS 启动瞬间（放映窗口尚未就绪/尚未取得前台）被误判而“秒退”
+			if (ppt_show == NULL) ppt_show = GetPptShow();
+
+			PptFocusState focusState = GetPptFocusState();
+			if (focusState == PptFocusState::Foreground)
 			{
-				EndPptShow();
+				foregroundSeen++;
+				focusLostCount = 0;
 			}
+			else if (focusState == PptFocusState::Lost)
+			{
+				bool armed = foregroundSeen > 0 && chrono::duration<double>(chrono::steady_clock::now() - initTime).count() > 2.0;
+				if (armed)
+				{
+					focusLostCount++;
+					if (focusLostCount >= 4)
+					{
+						ATDrawLogger->info("[PPT] 连续检测到放映窗口不在前台，结束放映（切出检测防抖已确认）");
+						if (pptComSetlist.exitShowOnFocusLost) EndPptShow();
+						focusLostCount = 0;
+					}
+				}
+			}
+			// Unknown：状态未知（如放映窗口未创建/进程查询失败），不计数、不判定
 		}
 
 		this_thread::sleep_for(chrono::milliseconds(250));

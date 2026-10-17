@@ -3796,7 +3796,7 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 					{
 						UIControlTarget[L"Image/choose/x"].v = float(0 + 28);
 						UIControlTarget[L"Image/choose/y"].v = float(floating_windows.height - 140);
-						if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection) UIControlColorTarget[L"Image/choose/fill"].v = RGBA(98, 175, 82, 255);
+						if (GetDisplayModeForUi() == StateModeSelectEnum::ATDrawSelection) UIControlColorTarget[L"Image/choose/fill"].v = RGBA(98, 175, 82, 255);
 						else UIControlColorTarget[L"Image/choose/fill"].v = RGBA(130, 130, 130, 255);
 					}
 					//画笔
@@ -3917,7 +3917,7 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 					{
 						UIControlTarget[L"Image/rubber/x"].v = float(192 + 28);
 						UIControlTarget[L"Image/rubber/y"].v = float(floating_windows.height - 140);
-						if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawEraser) UIControlColorTarget[L"Image/rubber/fill"].v = RGBA(98, 175, 82, 255);
+						if (GetDisplayModeForUi() == StateModeSelectEnum::ATDrawEraser) UIControlColorTarget[L"Image/rubber/fill"].v = RGBA(98, 175, 82, 255);
 						else UIControlColorTarget[L"Image/rubber/fill"].v = RGBA(130, 130, 130, 255);
 					}
 					//程序调测
@@ -3941,7 +3941,7 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 					{
 						UIControlTarget[L"Words/choose/height"].v = float(18);
 						UIControlTarget[L"Words/choose/top"].v = float(floating_windows.height - 155 + 48);
-						if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
+						if (GetDisplayModeForUi() == StateModeSelectEnum::ATDrawSelection)
 						{
 							UIControlTarget[L"Words/choose/left"].v = float(0 + 14);
 							UIControlTarget[L"Words/choose/right"].v = float(0 + 0 + 83);
@@ -3953,7 +3953,7 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 						}
 						UIControlTarget[L"Words/choose/bottom"].v = float(floating_windows.height - 155 + 48 + 48);
 
-						if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection) UIControlColorTarget[L"Words/choose/words_color"].v = RGBA(98, 175, 82, 255);
+						if (GetDisplayModeForUi() == StateModeSelectEnum::ATDrawSelection) UIControlColorTarget[L"Words/choose/words_color"].v = RGBA(98, 175, 82, 255);
 						else UIControlColorTarget[L"Words/choose/words_color"].v = RGBA(130, 130, 130, 255);
 					}
 					//画笔
@@ -4187,7 +4187,7 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 						UIControlTarget[L"Words/rubber/top"].v = float(floating_windows.height - 155 + 48);
 						UIControlTarget[L"Words/rubber/right"].v = float(192 + 7 + 83);
 						UIControlTarget[L"Words/rubber/bottom"].v = float(floating_windows.height - 155 + 48 + 48);
-						if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawEraser) UIControlColorTarget[L"Words/rubber/words_color"].v = RGBA(98, 175, 82, 255);
+						if (GetDisplayModeForUi() == StateModeSelectEnum::ATDrawEraser) UIControlColorTarget[L"Words/rubber/words_color"].v = RGBA(98, 175, 82, 255);
 						else UIControlColorTarget[L"Words/rubber/words_color"].v = RGBA(130, 130, 130, 255);
 					}
 					//程序调测
@@ -4586,7 +4586,7 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 					words_rect.right = LONG(UIControl[L"Words/choose/right"].v);
 					words_rect.bottom = LONG(UIControl[L"Words/choose/bottom"].v);
 				}
-				if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection) graphics.DrawString(L"选择", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
+				if (GetDisplayModeForUi() == StateModeSelectEnum::ATDrawSelection) graphics.DrawString(L"选择", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
 				else graphics.DrawString(L"选择并清空", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
 			}
 			//画笔
@@ -5752,9 +5752,12 @@ void MouseInteraction()
 									if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawEraser && setlist.eraserQuickClean)
 									{
 										// 橡皮模式下再点橡皮：清空画布并切回批注模式
+										// 过渡期间 UI 保持橡皮显示，避免闪现“选择”状态
+										eraserClearInProgress = true;
 										ChangeStateModeToSelection();
 										for (int i = 0; i < 20 && stateMode.StateModeSelectEcho != StateModeSelectEnum::ATDrawSelection; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
 										ChangeStateModeToPen();
+										eraserClearInProgress = false;
 									}
 									else if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawEraser) ChangeStateModeToEraser();
 
@@ -5768,9 +5771,11 @@ void MouseInteraction()
 						if (eraserLongPress)
 						{
 							// 长按橡皮（触摸屏长按等效）：清空画布并切回批注模式
+							eraserClearInProgress = true;
 							ChangeStateModeToSelection();
 							for (int i = 0; i < 20 && stateMode.StateModeSelectEcho != StateModeSelectEnum::ATDrawSelection; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
 							ChangeStateModeToPen();
+							eraserClearInProgress = false;
 						}
 					}
 				}

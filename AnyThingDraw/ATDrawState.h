@@ -97,6 +97,10 @@ extern StateModeClass stateMode;
 bool SetPenWidth(float targetWidth, bool setMemory = true);
 bool SetPenColor(COLORREF targetColor, bool setMemory = true);
 bool ChangeStateModeToSelection();
+
+// 橡皮清空回批注的过渡期间：UI 继续按橡皮显示，避免短暂闪现“选择”状态
+extern bool eraserClearInProgress;
+StateModeSelectEnum GetDisplayModeForUi();
 bool ChangeStateModeToPen();
 bool ChangeStateModeToShape();
 bool ChangeStateModeToEraser();
