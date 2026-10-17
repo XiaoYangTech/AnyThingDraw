@@ -2439,7 +2439,7 @@ void PptInfo()
 					if (focusLostCount >= 4)
 					{
 						ATDrawLogger->info("[PPT] 连续检测到放映窗口不在前台，结束放映（切出检测防抖已确认）");
-						if (pptComSetlist.exitShowOnFocusLost) EndPptShow();
+						if (pptComSetlist.exitShowOnFocusLost && !CheckEndShow.isChecking) EndPptShow();	// 弹框期间不自动结束放映
 						focusLostCount = 0;
 					}
 				}
@@ -4402,13 +4402,7 @@ bool IsPowerPointRunAsAdminSet()
 bool CheckEndShowClass::Check()
 {
 	if (isChecking == true) return false;
-	// isChecking = true;
-
-	// 延迟0.5秒后放开键盘
-	auto delayed = async(launch::async, [&]() {
-		this_thread::sleep_for(std::chrono::milliseconds(500));
-		isChecking = true;
-		});
+	isChecking = true;	// 原版行为：弹框前置位，期间屏蔽键盘转发与"切出自动结束放映"
 
 	// 已在 NextPptSlides 里预先询问并确认
 	if (preConfirmed)
