@@ -72,10 +72,28 @@ bool UnOccupyFile(HANDLE* hFile)
 SetListStruct setlist;
 shared_mutex setlistUpdateMutex;
 Json::Value setlistVal;
+// 首次运行新版本：把安装目录中的旧配置迁移到用户数据目录
+static void MigrateLegacySetting()
+{
+	error_code ec;
+	auto migrate = [&ec](const wstring& rel)
+		{
+			wstring oldPath = globalPath + rel;
+			wstring newPath = userDataPath + rel;
+			if (_waccess(newPath.c_str(), 0) != 0 && _waccess(oldPath.c_str(), 0) == 0)
+			{
+				filesystem::create_directories(filesystem::path(newPath).parent_path(), ec);
+				filesystem::copy_file(oldPath, newPath, filesystem::copy_options::overwrite_existing, ec);
+			}
+		};
+	migrate(L"opt\\deploy.json");
+	migrate(L"opt\\pptcom_configuration.json");
+}
 bool ReadSetting()
 {
+	MigrateLegacySetting();
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForRead(&fileHandle, globalPath + L"opt\\deploy.json"))
+	if (!OccupyFileForRead(&fileHandle, userDataPath + L"opt\\deploy.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -441,7 +459,7 @@ bool WriteSetting()
 	}
 
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForWrite(&fileHandle, globalPath + L"opt\\deploy.json"))
+	if (!OccupyFileForWrite(&fileHandle, userDataPath + L"opt\\deploy.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -475,7 +493,7 @@ PptComSetListStruct pptComSetlist;
 bool PptComReadSetting()
 {
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForRead(&fileHandle, globalPath + L"opt\\pptcom_configuration.json"))
+	if (!OccupyFileForRead(&fileHandle, userDataPath + L"opt\\pptcom_configuration.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -563,7 +581,7 @@ bool PptComReadSetting()
 bool PptComReadSettingPositionOnly()
 {
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForRead(&fileHandle, globalPath + L"opt\\pptcom_configuration.json"))
+	if (!OccupyFileForRead(&fileHandle, userDataPath + L"opt\\pptcom_configuration.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -647,7 +665,7 @@ bool PptComWriteSetting()
 	}
 
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForWrite(&fileHandle, globalPath + L"opt\\pptcom_configuration.json"))
+	if (!OccupyFileForWrite(&fileHandle, userDataPath + L"opt\\pptcom_configuration.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -746,7 +764,7 @@ bool DdbWriteInteraction(bool change, bool close)
 bool GetMemory()
 {
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForRead(&fileHandle, globalPath + L"AnyThingDraw\\Memory\\memory.json"))
+	if (!OccupyFileForRead(&fileHandle, userDataPath + L"AnyThingDraw\\Memory\\memory.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;
@@ -861,7 +879,7 @@ bool SetMemory()
 	}
 
 	HANDLE fileHandle = NULL;
-	if (!OccupyFileForWrite(&fileHandle, globalPath + L"AnyThingDraw\\Memory\\memory.json"))
+	if (!OccupyFileForWrite(&fileHandle, userDataPath + L"AnyThingDraw\\Memory\\memory.json"))
 	{
 		UnOccupyFile(&fileHandle);
 		return false;

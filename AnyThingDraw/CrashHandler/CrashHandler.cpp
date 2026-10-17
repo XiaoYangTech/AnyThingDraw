@@ -95,7 +95,11 @@ LONG WINAPI CrashHandler::UnhandledExceptionHandler(EXCEPTION_POINTERS* pExcepti
 		}
 	}
 
-	fs::path crashDir = rootDir / L"AnyThingDraw" / L"Crash"; // 定义 Crash 文件夹路径
+	fs::path crashBase = rootDir;
+	wchar_t localAppData[MAX_PATH] = {};
+	if (GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) != 0)
+		crashBase = fs::path(localAppData) / L"AnyThingDraw";
+	fs::path crashDir = crashBase / L"Crash"; // 定义 Crash 文件夹路径（用户数据目录，避免安装目录只读）
 
 	// 尝试创建 crash 文件夹 (create_directories 会创建所有不存在的父目录)
 	try {

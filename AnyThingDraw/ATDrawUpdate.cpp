@@ -189,12 +189,12 @@ AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state,
 	using enum AutomaticUpdateStateEnum;
 
 	error_code ec;
-	if (_waccess((globalPath + L"installer").c_str(), 4) == 0)
+	if (_waccess((userDataPath + L"installer").c_str(), 4) == 0)
 	{
-		filesystem::remove_all(globalPath + L"installer", ec);
-		filesystem::create_directory(globalPath + L"installer", ec);
+		filesystem::remove_all(userDataPath + L"installer", ec);
+		filesystem::create_directory(userDataPath + L"installer", ec);
 	}
-	else filesystem::create_directory(globalPath + L"installer", ec);
+	else filesystem::create_directory(userDataPath + L"installer", ec);
 
 	string prefix, domain, path;
 	splitUrl(url, prefix, domain, path);
@@ -203,19 +203,19 @@ AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state,
 	state->fileSize.store(editionInfo.fileSize.load());
 
 	wstring timestamp = getTimestamp();
-	bool reslut = DownloadEdition(domain, path, globalPath + L"installer\\", L"new_procedure_" + timestamp + L".tmp", state->downloadedSize, GetRefererInfo());
+	bool reslut = DownloadEdition(domain, path, userDataPath + L"installer\\", L"new_procedure_" + timestamp + L".tmp", state->downloadedSize, GetRefererInfo());
 
 	if (reslut)
 	{
 		error_code ec;
-		filesystem::remove(globalPath + L"installer\\new_procedure_" + timestamp + L".exe", ec);
-		filesystem::remove(globalPath + L"installer\\" + editionInfo.representation, ec);
+		filesystem::remove(userDataPath + L"installer\\new_procedure_" + timestamp + L".exe", ec);
+		filesystem::remove(userDataPath + L"installer\\" + editionInfo.representation, ec);
 
-		filesystem::rename(globalPath + L"installer\\new_procedure_" + timestamp + L".tmp", globalPath + L"installer\\new_procedure_" + timestamp + L".zip", ec);
+		filesystem::rename(userDataPath + L"installer\\new_procedure_" + timestamp + L".tmp", userDataPath + L"installer\\new_procedure_" + timestamp + L".zip", ec);
 		if (ec) return UpdateDownloadDamage;
 
-		HZIP hz = OpenZip((globalPath + L"installer\\new_procedure_" + timestamp + L".zip").c_str(), 0);
-		SetUnzipBaseDir(hz, (globalPath + L"installer").c_str());
+		HZIP hz = OpenZip((userDataPath + L"installer\\new_procedure_" + timestamp + L".zip").c_str(), 0);
+		SetUnzipBaseDir(hz, (userDataPath + L"installer").c_str());
 		ZIPENTRY ze;
 		GetZipItem(hz, -1, &ze);
 		int numitems = ze.index;
@@ -226,19 +226,19 @@ AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state,
 		}
 		CloseZip(hz);
 
-		filesystem::remove(globalPath + L"installer\\new_procedure_" + timestamp + L".zip", ec);
-		filesystem::rename(globalPath + L"installer\\" + editionInfo.representation, globalPath + L"installer\\new_procedure_" + timestamp + L".exe", ec);
+		filesystem::remove(userDataPath + L"installer\\new_procedure_" + timestamp + L".zip", ec);
+		filesystem::rename(userDataPath + L"installer\\" + editionInfo.representation, userDataPath + L"installer\\new_procedure_" + timestamp + L".exe", ec);
 		if (ec) return UpdateDownloadDamage;
 
 		string hash_md5, hash_sha256;
 		{
 			hashwrapper* myWrapper = new md5wrapper();
-			hash_md5 = myWrapper->getHashFromFileW(globalPath + L"installer\\new_procedure_" + timestamp + L".exe");
+			hash_md5 = myWrapper->getHashFromFileW(userDataPath + L"installer\\new_procedure_" + timestamp + L".exe");
 			delete myWrapper;
 		}
 		{
 			hashwrapper* myWrapper = new sha256wrapper();
-			hash_sha256 = myWrapper->getHashFromFileW(globalPath + L"installer\\new_procedure_" + timestamp + L".exe");
+			hash_sha256 = myWrapper->getHashFromFileW(userDataPath + L"installer\\new_procedure_" + timestamp + L".exe");
 			delete myWrapper;
 		}
 
@@ -248,7 +248,7 @@ AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state,
 			if (!GetUpdateTargetSnapshot().enableAutoUpdate && !mandatoryUpdate)
 			{
 				error_code ec;
-				filesystem::remove(globalPath + L"installer\\new_procedure_" + timestamp + L".exe", ec);
+				filesystem::remove(userDataPath + L"installer\\new_procedure_" + timestamp + L".exe", ec);
 
 				return UpdateNew;
 			}
@@ -271,7 +271,7 @@ AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state,
 				Json::StreamWriterBuilder outjson;
 				outjson.settings_["emitUTF8"] = true;
 				unique_ptr<Json::StreamWriter> writer(outjson.newStreamWriter());
-				ofstream writejson(globalPath + L"installer\\update.json", ios::binary);
+				ofstream writejson(userDataPath + L"installer\\update.json", ios::binary);
 				writejson << "\xEF\xBB\xBF";
 				writer->write(root, &writejson);
 				writejson.close();
@@ -280,7 +280,7 @@ AutomaticUpdateStateEnum DownloadNewProgram(DownloadNewProgramStateClass* state,
 		else
 		{
 			error_code ec;
-			filesystem::remove(globalPath + L"installer\\new_procedure_" + timestamp + L".exe", ec);
+			filesystem::remove(userDataPath + L"installer\\new_procedure_" + timestamp + L".exe", ec);
 
 			return UpdateDownloadDamage;
 		}
@@ -295,12 +295,12 @@ AutomaticUpdateStateEnum DownloadNewInstaller(DownloadNewProgramStateClass* stat
 	using enum AutomaticUpdateStateEnum;
 
 	error_code ec;
-	if (_waccess((globalPath + L"installer").c_str(), 4) == 0)
+	if (_waccess((userDataPath + L"installer").c_str(), 4) == 0)
 	{
-		filesystem::remove_all(globalPath + L"installer", ec);
-		filesystem::create_directory(globalPath + L"installer", ec);
+		filesystem::remove_all(userDataPath + L"installer", ec);
+		filesystem::create_directory(userDataPath + L"installer", ec);
 	}
-	else filesystem::create_directory(globalPath + L"installer", ec);
+	else filesystem::create_directory(userDataPath + L"installer", ec);
 
 	string prefix, domain, path;
 	splitUrl(url, prefix, domain, path);
@@ -313,28 +313,28 @@ AutomaticUpdateStateEnum DownloadNewInstaller(DownloadNewProgramStateClass* stat
 	wstring tmpFile = L"atdraw_setup_" + timestamp + L".tmp";
 	wstring exeFile = L"atdraw_setup_" + timestamp + L".exe";
 
-	if (!DownloadEdition(domain, path, globalPath + L"installer\\", tmpFile, state->downloadedSize, GetRefererInfo()))
+	if (!DownloadEdition(domain, path, userDataPath + L"installer\\", tmpFile, state->downloadedSize, GetRefererInfo()))
 		return UpdateDownloadFail;
 
-	filesystem::remove(globalPath + L"installer\\" + exeFile, ec);
-	filesystem::rename(globalPath + L"installer\\" + tmpFile, globalPath + L"installer\\" + exeFile, ec);
+	filesystem::remove(userDataPath + L"installer\\" + exeFile, ec);
+	filesystem::rename(userDataPath + L"installer\\" + tmpFile, userDataPath + L"installer\\" + exeFile, ec);
 	if (ec) return UpdateDownloadDamage;
 
 	// 云端提供了校验值 / 大小时校验安装包
 	if (!editionInfo.hash_sha256.empty())
 	{
 		hashwrapper* myWrapper = new sha256wrapper();
-		string hash_sha256 = myWrapper->getHashFromFileW(globalPath + L"installer\\" + exeFile);
+		string hash_sha256 = myWrapper->getHashFromFileW(userDataPath + L"installer\\" + exeFile);
 		delete myWrapper;
 		if (hash_sha256 != editionInfo.hash_sha256)
 		{
-			filesystem::remove(globalPath + L"installer\\" + exeFile, ec);
+			filesystem::remove(userDataPath + L"installer\\" + exeFile, ec);
 			return UpdateDownloadDamage;
 		}
 	}
 	if (editionInfo.fileSize.load() > 0 && state->downloadedSize.load() != editionInfo.fileSize.load())
 	{
-		filesystem::remove(globalPath + L"installer\\" + exeFile, ec);
+		filesystem::remove(userDataPath + L"installer\\" + exeFile, ec);
 		return UpdateDownloadDamage;
 	}
 
@@ -348,7 +348,7 @@ AutomaticUpdateStateEnum DownloadNewInstaller(DownloadNewProgramStateClass* stat
 		Json::StreamWriterBuilder outjson;
 		outjson.settings_["emitUTF8"] = true;
 		unique_ptr<Json::StreamWriter> writer(outjson.newStreamWriter());
-		ofstream writejson(globalPath + L"installer\\pending_update.json", ios::binary);
+		ofstream writejson(userDataPath + L"installer\\pending_update.json", ios::binary);
 		writejson << "\xEF\xBB\xBF";
 		writer->write(root, &writejson);
 		writejson.close();
@@ -362,7 +362,7 @@ AutomaticUpdateStateEnum DownloadNewInstaller(DownloadNewProgramStateClass* stat
 // 待更新标记是否就绪（已下载同一版本的安装包，等待下次启动安装）
 static bool IsPendingUpdateReady(const wstring& version)
 {
-	wstring pendingPath = globalPath + L"installer\\pending_update.json";
+	wstring pendingPath = userDataPath + L"installer\\pending_update.json";
 	if (_waccess(pendingPath.c_str(), 4) != 0) return false;
 
 	ifstream readjson(pendingPath, ios::binary);
@@ -378,7 +378,7 @@ static bool IsPendingUpdateReady(const wstring& version)
 	if (utf8ToUtf16(root["version"].asString()) != version) return false;
 	if (!root.isMember("installer") || !root["installer"].isString()) return false;
 
-	wstring installerPath = globalPath + utf8ToUtf16(root["installer"].asString());
+	wstring installerPath = userDataPath + utf8ToUtf16(root["installer"].asString());
 	return _waccess(installerPath.c_str(), 4) == 0;
 }
 
@@ -386,7 +386,7 @@ static bool IsPendingUpdateReady(const wstring& version)
 // 同意 UAC 时本进程会被安装程序结束；拒绝 UAC 或安装失败则清除标记并继续正常启动。
 void ApplyPendingUpdate()
 {
-	wstring pendingPath = globalPath + L"installer\\pending_update.json";
+	wstring pendingPath = userDataPath + L"installer\\pending_update.json";
 	if (_waccess(pendingPath.c_str(), 4) != 0) return;
 
 	string content;
@@ -406,7 +406,7 @@ void ApplyPendingUpdate()
 		return;
 	}
 
-	wstring installerPath = globalPath + utf8ToUtf16(root["installer"].asString());
+	wstring installerPath = userDataPath + utf8ToUtf16(root["installer"].asString());
 	if (_waccess(installerPath.c_str(), 4) != 0)
 	{
 		filesystem::remove(pendingPath, ec);

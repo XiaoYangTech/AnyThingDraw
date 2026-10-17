@@ -55,6 +55,7 @@ wstring deviceKey;				// 程序发布日期
 
 wstring userId;									// 用户GUID
 wstring globalPath;								// 程序当前路径
+wstring userDataPath;							// 用户数据目录（%LOCALAPPDATA%\AnyThingDraw\）
 wstring pluginPath;								// 数据保存的路径
 
 wstring programArchitecture = L"win32";
@@ -111,44 +112,16 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 	// 路径预处理
 	{
 		globalPath = GetCurrentExeDirectory() + L"\\";
+
+		// 用户数据目录：%LOCALAPPDATA%\AnyThingDraw\（安装目录受保护/只读时数据仍可正常读写）
 		{
-			int typeRoot = 0;
+			wchar_t localAppData[MAX_PATH] = {};
+			if (GetEnvironmentVariableW(L"LOCALAPPDATA", localAppData, MAX_PATH) != 0)
+				userDataPath = wstring(localAppData) + L"\\AnyThingDraw\\";
+			else userDataPath = globalPath;
 
-			if (globalPath.find(L"C:\\Program Files\\") != globalPath.npos || globalPath.find(L"C:\\Program Files (x86)\\") != globalPath.npos || globalPath.find(L"C:\\Windows\\") != globalPath.npos) typeRoot = 2;
-			else
-			{
-				wstring time = getTimestamp();
-				wstring path = globalPath + L"ATDrawRootCheck" + time;
-
-				error_code ec;
-				try {
-					// 创建空白文件
-					wofstream ofs(path);
-					if (!ofs) typeRoot = 1;
-					ofs.close();
-					if (_waccess(path.c_str(), 0) == -1) typeRoot = 1;
-
-					// 删除文件
-					filesystem::remove(path, ec);
-					if (ec) typeRoot = 1;
-					if (_waccess(path.c_str(), 0) == 0) typeRoot = 1;
-				}
-				catch (const filesystem::filesystem_error)
-				{
-					typeRoot = 1;
-				}
-			}
-
-			if (typeRoot == 1)
-			{
-				MessageBox(NULL, L"The current directory permissions are restricted and cannot run normally. Please transfer the program to another directory before running it again.(#1)\n当前目录权限受限无法正常运行，请将程序转移至其他目录后再运行。(#1)", L"AnyThingDraw Tips | 亿方万能画笔提示", MB_SYSTEMMODAL | MB_OK);
-				return 0;
-			}
-			else if (typeRoot == 2)
-			{
-				MessageBox(NULL, L"The current directory permissions are restricted (file operations are redirected to the virtual storage directory) and cannot run properly. Please transfer the program to another directory before running it again.(#2)\n当前目录权限受限（文件操作被重定向到虚拟存储目录）无法正常运行，请将程序转移至其他目录后再运行。(#2)", L"AnyThingDraw Tips | 亿方万能画笔提示", MB_SYSTEMMODAL | MB_OK);
-				return 0;
-			}
+			error_code ec;
+			filesystem::create_directories(userDataPath, ec);
 		}
 
 		wstring appName = GetCurrentExeName();
@@ -167,7 +140,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 				if (GetEnvironmentVariableW(L"ProgramData", buffer, MAX_PATH) != 0) pluginPath = buffer;
 				else pluginPath = L"C:\\ProgramData";*/
 
-				pluginPath = globalPath;
+				pluginPath = userDataPath;
 				pluginPath += L"AnyThingDraw\\Plugin\\";
 			}
 		}
@@ -292,7 +265,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 	}
 	// 程序自动更新
 	{
-		if (_waccess((globalPath + L"update.json").c_str(), 4) == 0)
+		if (_waccess((userDataPath + L"update.json").c_str(), 4) == 0)
 		{
 			wstring tedition, representation;
 			string thash_md5, thash_sha256;
@@ -302,7 +275,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			string jsonContent;
 
 			HANDLE fileHandle = NULL;
-			if (OccupyFileForRead(&fileHandle, globalPath + L"update.json"))
+			if (OccupyFileForRead(&fileHandle, userDataPath + L"update.json"))
 			{
 				LARGE_INTEGER fileSize;
 				if (flag && !GetFileSizeEx(fileHandle, &fileSize)) flag = false;
@@ -406,7 +379,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			{
 			fail:
 				error_code ec;
-				filesystem::remove(globalPath + L"update.json", ec);
+				filesystem::remove(userDataPath + L"update.json", ec);
 
 				filesystem::path directory(globalPath);
 				wstring main_path = directory.parent_path().parent_path().wstring() + L"\\";
@@ -417,7 +390,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 				return 0;
 			}
 		}
-		if (_waccess((globalPath + L"installer\\update.json").c_str(), 4) == 0)
+		if (_waccess((userDataPath + L"installer\\update.json").c_str(), 4) == 0)
 		{
 			wstring tedition, path;
 			string thash_md5, thash_sha256;
@@ -427,7 +400,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			string jsonContent;
 
 			HANDLE fileHandle = NULL;
-			if (OccupyFileForRead(&fileHandle, globalPath + L"installer\\update.json"))
+			if (OccupyFileForRead(&fileHandle, userDataPath + L"installer\\update.json"))
 			{
 				LARGE_INTEGER fileSize;
 				if (flag && !GetFileSizeEx(fileHandle, &fileSize)) flag = false;
@@ -498,7 +471,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 				updateVal["old_name"] = Json::Value(utf16ToUtf8(GetCurrentExeName()));
 				if (mandatoryUpdate) updateVal["MandatoryUpdate"] = Json::Value(false);
 
-				if (!OccupyFileForWrite(&fileHandle, globalPath + L"installer\\update.json")) flag = false;
+				if (!OccupyFileForWrite(&fileHandle, userDataPath + L"installer\\update.json")) flag = false;
 				if (flag && SetFilePointer(fileHandle, 0, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER) flag = false;
 				if (flag && !SetEndOfFile(fileHandle)) flag = false;
 
@@ -524,7 +497,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			if (!flag)
 			{
 				error_code ec;
-				filesystem::remove_all(globalPath + L"installer", ec);
+				filesystem::remove_all(userDataPath + L"installer", ec);
 			}
 		}
 	}
@@ -539,7 +512,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 		wstring Timestamp = getTimestamp();
 
 		error_code ec;
-		if (_waccess((globalPath + L"log").c_str(), 0) == -1) filesystem::create_directory(globalPath + L"log", ec);
+		if (_waccess((userDataPath + L"log").c_str(), 0) == -1) filesystem::create_directory(userDataPath + L"log", ec);
 		else
 		{
 			// 历史日志清理
@@ -594,7 +567,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 					}
 				};
 
-			wstring directoryPath = globalPath + L"log";
+			wstring directoryPath = userDataPath + L"log";
 			filesystem::path directory(directoryPath);
 			if (filesystem::exists(directory) && filesystem::is_directory(directory))
 			{
@@ -602,9 +575,9 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			}
 		}
 
-		if (_waccess((globalPath + L"log\\atdraw" + Timestamp + L".log").c_str(), 0) == 0) filesystem::remove(globalPath + L"log\\atdraw" + Timestamp + L".log", ec);
+		if (_waccess((userDataPath + L"log\\atdraw" + Timestamp + L".log").c_str(), 0) == 0) filesystem::remove(userDataPath + L"log\\atdraw" + Timestamp + L".log", ec);
 
-		auto ATDrawLoggerFileSink = std::make_shared<spdlog::sinks::basic_file_sink<std::mutex>>(globalPath + L"log\\atdraw" + Timestamp + L".log", true);
+		auto ATDrawLoggerFileSink = std::make_shared<spdlog::sinks::basic_file_sink<std::mutex>>(userDataPath + L"log\\atdraw" + Timestamp + L".log", true);
 
 		spdlog::init_thread_pool(8192, 64);
 		ATDrawLogger = std::make_shared<spdlog::async_logger>("ATDrawLogger", ATDrawLoggerFileSink, spdlog::thread_pool(), spdlog::async_overflow_policy::block);
@@ -852,8 +825,12 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 	{
 		//PptCOM 组件加载
 		{
-			if (!ExtractResource((globalPath + L"PptCOM.dll").c_str(), L"DLL", MAKEINTRESOURCE(222)))
-				ATDrawLogger->warn("[主线程][ATDrawMain] 解压PptCOM.dll失败");
+			// 安装包已放置 PptCOM.dll 时直接使用；便携版（缺失时）才从资源释放
+			if (_waccess((globalPath + L"PptCOM.dll").c_str(), 0) != 0)
+			{
+				if (!ExtractResource((globalPath + L"PptCOM.dll").c_str(), L"DLL", MAKEINTRESOURCE(222)))
+					ATDrawLogger->warn("[主线程][ATDrawMain] 解压PptCOM.dll失败（安装目录疑似只读，请使用安装包安装）");
+			}
 
 			ACTCTX actCtx = { 0 };
 			actCtx.cbSize = sizeof(actCtx);

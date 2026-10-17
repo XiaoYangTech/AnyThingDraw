@@ -194,6 +194,7 @@ extern wstring editionDate;
 extern wstring userId;
 extern wstring deviceKey;
 extern wstring globalPath;
+extern wstring userDataPath;
 extern wstring pluginPath;
 
 extern wstring programArchitecture;
