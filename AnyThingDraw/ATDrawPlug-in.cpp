@@ -23,6 +23,7 @@ import AnyThingDraw.Thread.Status;
 
 #include "ATDrawPlug-in.h"
 
+#include "ATDrawMain.h"
 #include "ATDrawConfiguration.h"
 #include "ATDrawDisplayManagement.h"
 #include "ATDrawDraw.h"
@@ -1099,8 +1100,8 @@ void PptUI()
 	PPTMainMonitor = MainMonitor;
 	DisplaysInfoLock.unlock();
 
-	// 启用 UI 动画
-	PptUiAnimationEnable = true;
+	// 关闭 UI 动画：工具栏直接出现/消失（避免"缓缓上升"和延迟感）
+	PptUiAnimationEnable = false;
 
 	// UI 初始化
 	{
@@ -2371,6 +2372,33 @@ PptFocusState GetPptFocusState()
 	// 前台是明确的其它进程窗口 → 切出放映
 	return PptFocusState::Lost;
 }
+
+// 记录当前前台窗口的类名/标题/进程，用于排查"什么进程导致 PPT 自动切出"
+void LogForegroundWindowDetail(const wstring& tag)
+{
+	if (!ATDrawLogger) return;
+	HWND fg = GetForegroundWindow();
+	wchar_t cls[MAX_PATH] = { 0 }, title[MAX_PATH] = { 0 };
+	if (fg != NULL)
+	{
+		GetClassNameW(fg, cls, MAX_PATH);
+		GetWindowTextW(fg, title, MAX_PATH);
+	}
+	DWORD pid = 0;
+	if (fg != NULL) GetWindowThreadProcessId(fg, &pid);
+	wstring procName;
+	{
+		HANDLE p = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+		if (p != NULL)
+		{
+			wchar_t buf[MAX_PATH] = { 0 };
+			DWORD size = MAX_PATH;
+			if (QueryFullProcessImageNameW(p, 0, buf, &size)) procName = buf;
+			CloseHandle(p);
+		}
+	}
+	ATDrawLogger->info(("[PPT][焦点] " + utf16ToUtf8(tag) + " hwnd=0x" + to_string(reinterpret_cast<uintptr_t>(fg)) + " class=" + utf16ToUtf8(cls) + " title=" + utf16ToUtf8(title) + " pid=" + to_string(pid) + " proc=" + utf16ToUtf8(procName)).c_str());
+}
 void PptInfo()
 {
 	AnyThingDraw::Thread::StatusGuard guard("PptInfo");
@@ -2389,6 +2417,7 @@ void PptInfo()
 			PptUiAllReplaceSignal = -1;
 
 			ppt_show = GetPptShow();
+			if (ATDrawLogger) ATDrawLogger->info(("[PPT] 检测到放映开始，显示工具栏 hwnd=0x" + to_string(reinterpret_cast<uintptr_t>(ppt_show)) + " title=" + utf16ToUtf8(GetPptTitle())).c_str());
 
 			std::wstringstream ss(GetPptTitle());
 			getline(ss, ppt_title);
@@ -2425,6 +2454,15 @@ void PptInfo()
 			if (ppt_show == NULL) ppt_show = GetPptShow();
 
 			PptFocusState focusState = GetPptFocusState();
+			{
+				static PptFocusState lastLoggedFocusState = PptFocusState::Unknown;
+				if (focusState != lastLoggedFocusState)
+				{
+					if (focusState == PptFocusState::Lost) LogForegroundWindowDetail(L"检测到可能切出放映");
+					else if (focusState == PptFocusState::Foreground) LogForegroundWindowDetail(L"放映窗口回到前台");
+					lastLoggedFocusState = focusState;
+				}
+			}
 			if (focusState == PptFocusState::Foreground)
 			{
 				foregroundSeen++;
@@ -2438,7 +2476,8 @@ void PptInfo()
 					focusLostCount++;
 					if (focusLostCount >= 4)
 					{
-						ATDrawLogger->info("[PPT] 连续检测到放映窗口不在前台，结束放映（切出检测防抖已确认）");
+						LogForegroundWindowDetail(L"自动结束放映触发");
+					ATDrawLogger->info("[PPT] 连续检测到放映窗口不在前台，结束放映（切出检测防抖已确认）");
 						if (pptComSetlist.exitShowOnFocusLost && !CheckEndShow.isChecking) EndPptShow();	// 弹框期间不自动结束放映
 						focusLostCount = 0;
 					}

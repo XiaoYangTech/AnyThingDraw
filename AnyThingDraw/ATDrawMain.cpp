@@ -112,6 +112,9 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 	// 路径预处理
 	{
 		globalPath = GetCurrentExeDirectory() + L"\\";
+		// 固定当前工作目录为程序目录：避免通过快捷方式（未设起始位置）启动时 cwd 落在桌面，
+		// 导致相对路径读写被"重定向到桌面"
+		SetCurrentDirectoryW(globalPath.c_str());
 
 		// 用户数据目录：统一放 %LOCALAPPDATA%\AnyThingDraw\（安装目录 Program Files 只读，不写程序目录）
 		{
@@ -551,12 +554,15 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 					return (currentTimeStamp - fileTimeStamp) >= (7LL * 24LL * 60LL * 60LL * 1000LL) || (currentTimeStamp - fileTimeStamp) < 0; // 7天的毫秒数
 				};
 
-			auto deleteOldLogFiles = [&isLogFile, &isOldLogFile](const filesystem::path& directory)
+			auto deleteOldLogFiles = [&isLogFile, &isOldLogFile, &Timestamp](const filesystem::path& directory)
 				{
+					const string currentName = "atdraw" + utf16ToUtf8(Timestamp) + ".log";
 					for (const auto& entry : filesystem::directory_iterator(directory))
 					{
 						if (entry.is_regular_file())
 						{
+							// 跳过本次运行正在写的日志文件
+							if (entry.path().filename().string() == currentName) continue;
 							if (isLogFile(entry.path().filename().string()) && isOldLogFile(entry.path()))
 							{
 								error_code ec;
@@ -582,9 +588,17 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 		ATDrawLogger = std::make_shared<spdlog::async_logger>("ATDrawLogger", ATDrawLoggerFileSink, spdlog::thread_pool(), spdlog::async_overflow_policy::block);
 
 		ATDrawLogger->set_level(spdlog::level::info);
-		ATDrawLogger->set_pattern("[%l][%H:%M:%S.%e]%v");
+		// 带日期的本地时间（原格式缺少日期，跨天/多实例排查时分不清）
+		ATDrawLogger->set_pattern("[%Y-%m-%d %H:%M:%S.%e][%l]%v");
 
-		ATDrawLogger->flush_on(spdlog::level::info);
+		// 兜底：日志线程/文件写入出错时至少留一条调试输出，并避免异常静默吞掉整个 sink
+		spdlog::set_error_handler([](const std::string& msg)
+			{
+				OutputDebugStringA(("[ATDrawLogger] spdlog error: " + msg + "\n").c_str());
+			});
+
+		// 定期刷盘（原来每条 info 都 flush，开销大且出问题后不易察觉）
+		spdlog::flush_every(std::chrono::seconds(2));
 		ATDrawLogger->info("[主线程][ATDrawMain] 日志开始记录 " + utf16ToUtf8(editionDate) + " " + utf16ToUtf8(userId));
 
 		if (LaunchState::crashTry) ATDrawLogger->warn("[主线程][ATDrawMain] 发现程序先前发生过崩溃错误");

@@ -1,4 +1,4 @@
-import AnyThingDraw.Thread.Status;
+﻿import AnyThingDraw.Thread.Status;
 
 
 #include "ATDrawFloating.h"
@@ -495,7 +495,7 @@ void DrawScreen()
 			atdrawLoadImage(&floating_icon[7], L"PNG", L"icon7");
 			atdrawLoadImage(&floating_icon[10], L"PNG", L"icon10");
 
-			atdrawLoadImage(&floating_icon[6], L"PNG", L"icon6", 30, 30, true);
+			atdrawLoadImage(&floating_icon[30], L"PNG", L"icon6", 30, 30, true);
 			atdrawLoadImage(&floating_icon[8], L"PNG", L"icon8", 30, 30, true);
 
 			atdrawLoadImage(&floating_icon[11], L"PNG", L"icon11", 20, 20, true);
@@ -508,6 +508,7 @@ void DrawScreen()
 			atdrawLoadImage(&floating_icon[18], L"PNG", L"icon18", 20, 20, true);
 			atdrawLoadImage(&floating_icon[17], L"PNG", L"icon17", 20, 20, true);
 			atdrawLoadImage(&floating_icon[20], L"PNG", L"icon20", 20, 20, true);
+			atdrawLoadImage(&floating_icon[30], L"PNG", L"icon21", 30, 30, true);	// 鼠标点击（窗口穿透）
 
 
 			atdrawLoadImage(&floating_icon[23], L"PNG", L"CustomizeIco3", 40, 40, true); // desktop
@@ -4734,9 +4735,9 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 					{
 						hiex::EasyX_Gdiplus_RoundRect((float)floating_windows.width - 96 + 4, (float)floating_windows.height - 256 + 8, 88, 40, 20, 20, RGBA(98, 175, 82, 255), 2.5, false, SmoothingModeHighQuality, &background);
 
-						ChangeColor(floating_icon[6], RGBA(98, 175, 82, 255));
+						ChangeColor(floating_icon[30], RGBA(98, 175, 82, 255));
 
-						hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 12, &floating_icon[6]);
+						hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 12, &floating_icon[30]);
 
 						Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
 						SolidBrush WordBrush(hiex::ConvertToGdiplusColor(RGBA(98, 175, 82, 255), false));
@@ -4751,9 +4752,9 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 					}
 					else
 					{
-						ChangeColor(floating_icon[6], RGBA(130, 130, 130, 255));
+						ChangeColor(floating_icon[30], RGBA(130, 130, 130, 255));
 
-						hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 12, &floating_icon[6]);
+						hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 12, &floating_icon[30]);
 
 						Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
 						SolidBrush WordBrush(hiex::ConvertToGdiplusColor(RGBA(130, 130, 130, 255), false));

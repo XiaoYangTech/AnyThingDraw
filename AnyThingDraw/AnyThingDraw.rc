@@ -101,6 +101,7 @@ ICON18                  PNG                     "src\\seewo_camera.png"
 ICON19                  PNG                     "src\\choose_clear.png"
 
 ICON20                  PNG                     "src\\wps_wpp.png"
+ICON21                  PNG                     "src\\mouse_click.png"
 
 PLUGINFLAG1             PNG                     "src\\PluginFlag1.png"
 

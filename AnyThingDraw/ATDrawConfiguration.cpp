@@ -74,34 +74,33 @@ shared_mutex setlistUpdateMutex;
 Json::Value setlistVal;
 // 首次运行新版本：把安装目录中的旧配置迁移到用户数据目录
 // 统一设置文件：deploy / pptcom / memory 合并到 userDataPath\settings.json
-static Json::Value LoadUnifiedRoot()
+// 统一设置文件根对象：仅启动时加载一次，之后所有写函数都基于同一份内存对象合并，
+// 避免"读取旧副本 -> 写回"把其它写函数的改动覆盖掉（PPT/白板/画笔记忆设置丢失的根因）
+static Json::Value& UnifiedRoot()
 {
-	// 缓存：写函数会先清空文件再拼内容，必须用清空前的快照，否则每次都读到空
 	static bool loaded = false;
 	static Json::Value cache;
 	if (loaded) return cache;
-	Json::Value root(Json::objectValue);
+	loaded = true;
+
 	HANDLE h = NULL;
-	if (!OccupyFileForRead(&h, userDataPath + L"settings.json")) return root;
+	if (!OccupyFileForRead(&h, userDataPath + L"settings.json")) return cache;
 	LARGE_INTEGER sz = {};
-	if (!GetFileSizeEx(h, &sz) || sz.QuadPart <= 0) { UnOccupyFile(&h); return root; }
+	if (!GetFileSizeEx(h, &sz) || sz.QuadPart <= 0) { UnOccupyFile(&h); return cache; }
 	DWORD n = static_cast<DWORD>(sz.QuadPart);
 	string s(n, '\0');
 	DWORD read = 0;
 	SetFilePointer(h, 0, NULL, FILE_BEGIN);
 	bool ok = ReadFile(h, &s[0], n, &read, NULL) && read == n;
 	UnOccupyFile(&h);
-	if (!ok) return root;
+	if (!ok) return cache;
 	if (s.size() >= 3 && static_cast<unsigned char>(s[0]) == 0xEF) s = s.substr(3);
 	Json::CharReaderBuilder rb;
 	unique_ptr<Json::CharReader> reader(rb.newCharReader());
 	string errs;
 	Json::Value parsed;
-	Json::Value result = root;
-	if (reader->parse(s.data(), s.data() + s.size(), &parsed, &errs) && parsed.isObject()) result = parsed;
-	loaded = true;
-	cache = result;
-	return result;
+	if (reader->parse(s.data(), s.data() + s.size(), &parsed, &errs) && parsed.isObject()) cache = parsed;
+	return cache;
 }
 static void MergeJsonValue(Json::Value& root, const Json::Value& add)
 {
@@ -134,7 +133,7 @@ static void MergeFileInto(Json::Value& root, const wstring& p)
 // 旧版分散的 json 首次启动时合并进 settings.json
 static void MigrateLegacySetting()
 {
-	Json::Value root = LoadUnifiedRoot();
+	Json::Value& root = UnifiedRoot();
 	// 已有独立的 deploy 设置键就不再重复迁移（此前可能只写入了 PPT 配置）
 	if (root.isMember("Regular") || root.isMember("Preset") || root.isMember("Component")) return;
 	MergeFileInto(root, globalPath + L"opt\\deploy.json");
@@ -549,7 +548,7 @@ bool WriteSetting()
 	}
 
 	Json::StreamWriterBuilder writerBuilder;
-	Json::Value unifiedRoot = LoadUnifiedRoot();
+	Json::Value& unifiedRoot = UnifiedRoot();
 	MergeJsonValue(unifiedRoot, setlistVal);
 	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, unifiedRoot);
 
@@ -757,7 +756,7 @@ bool PptComWriteSetting()
 	}
 
 	Json::StreamWriterBuilder writerBuilder;
-	Json::Value unifiedRoot = LoadUnifiedRoot();
+	Json::Value& unifiedRoot = UnifiedRoot();
 	MergeJsonValue(unifiedRoot, updateVal);
 	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, unifiedRoot);
 
@@ -825,9 +824,7 @@ bool DdbWriteInteraction(bool change, bool close)
 	}
 
 	Json::StreamWriterBuilder writerBuilder;
-	Json::Value unifiedRoot = LoadUnifiedRoot();
-	MergeJsonValue(unifiedRoot, updateVal);
-	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, unifiedRoot);
+	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, updateVal);
 
 	DWORD bytesWritten = 0;
 	if (!WriteFile(fileHandle, jsonContent.data(), static_cast<DWORD>(jsonContent.size()), &bytesWritten, NULL) || bytesWritten != jsonContent.size())
@@ -975,7 +972,7 @@ bool SetMemory()
 	}
 
 	Json::StreamWriterBuilder writerBuilder;
-	Json::Value unifiedRoot = LoadUnifiedRoot();
+	Json::Value& unifiedRoot = UnifiedRoot();
 	MergeJsonValue(unifiedRoot, updateVal);
 	string jsonContent = "\xEF\xBB\xBF" + Json::writeString(writerBuilder, unifiedRoot);
 
