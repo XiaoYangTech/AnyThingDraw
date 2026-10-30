@@ -1412,6 +1412,7 @@ static void WhiteboardApplyPending()
 	static bool wbApplied = false;
 	if (whiteboard.select == wbApplied) return;
 	wbApplied = whiteboard.select;
+	if (ATDrawLogger) ATDrawLogger->info(("[白板] 应用 -> " + string(wbApplied ? "开（备份画布并清空）" : "关（清空前恢复画布）")).c_str());
 	if (wbApplied)
 	{
 		whiteboardBackup.Resize(drawpad.getwidth(), drawpad.getheight());
@@ -1454,6 +1455,7 @@ static void WhiteboardResetAnnotations()
 void ATRDrawWhiteboardToggle()
 {
 	whiteboard.select = !whiteboard.select;
+	if (ATDrawLogger) ATDrawLogger->info(("[白板] 切换 -> " + string(whiteboard.select ? "开" : "关")).c_str());
 	if (whiteboard.select)
 	{
 		penetrate.select = false;
