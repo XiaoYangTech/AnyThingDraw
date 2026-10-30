@@ -170,7 +170,7 @@ Section "AnyThingDraw" SecMain
 
   ; 开始菜单与桌面快捷方式
   CreateDirectory "$SMPROGRAMS\亿方万能画笔"
-  CreateShortCut "$SMPROGRAMS\亿方万能画笔\亿方万能画笔.lnk" "$INSTDIR\AnyThingDraw.exe" "" "" 0 SW_SHOWNORMAL "" "$INSTDIR"
+  CreateShortCut "$SMPROGRAMS\亿方万能画笔\亿方万能画笔.lnk" "$INSTDIR\AnyThingDraw.exe"
   CreateShortCut "$SMPROGRAMS\亿方万能画笔\卸载 亿方万能画笔.lnk" "$INSTDIR\Uninstall.exe"
 
   ; 清理旧版开始菜单文件夹残留
@@ -179,7 +179,7 @@ Section "AnyThingDraw" SecMain
   Delete "$SMPROGRAMS\AnyThingDraw\亿方万能画笔.lnk"
   Delete "$SMPROGRAMS\AnyThingDraw\卸载 亿方万能画笔.lnk"
   RMDir "$SMPROGRAMS\AnyThingDraw"
-  CreateShortCut "$DESKTOP\亿方万能画笔.lnk" "$INSTDIR\AnyThingDraw.exe" "" "" 0 SW_SHOWNORMAL "" "$INSTDIR"
+  CreateShortCut "$DESKTOP\亿方万能画笔.lnk" "$INSTDIR\AnyThingDraw.exe"
 
   ; 静默安装（由软件内自动更新触发）完成后自动启动软件
   IfSilent start_after_install
