@@ -102,6 +102,7 @@ ICON19                  PNG                     "src\\choose_clear.png"
 
 ICON20                  PNG                     "src\\wps_wpp.png"
 ICON21                  PNG                     "src\\mouse_click.png"
+ICON22                  PNG                     "src\\whiteboard.png"
 
 PLUGINFLAG1             PNG                     "src\\PluginFlag1.png"
 

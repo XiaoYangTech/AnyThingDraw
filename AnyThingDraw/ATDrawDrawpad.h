@@ -37,6 +37,8 @@ extern bool drawWaiting;
 extern shared_mutex drawWaitingSm;
 
 extern IMAGE drawpad;
+extern IMAGE whiteboardBackup;
+void ATRDrawWhiteboardToggle();
 extern IMAGE window_background;
 
 extern HHOOK DrawpadHookCall;

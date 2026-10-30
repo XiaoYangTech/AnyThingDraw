@@ -73,7 +73,8 @@ void ATDrawRecall()
 		recall_image_recond = 0;
 		FirstDraw = true;
 	}
-	SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+	if (whiteboard.select) SetImageColor(window_background, RGB(255, 255, 255), false);
+	else SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
 	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 	if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection)

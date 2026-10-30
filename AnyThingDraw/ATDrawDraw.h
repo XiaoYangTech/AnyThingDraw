@@ -35,6 +35,14 @@ struct FreezeFrameStruct
 };
 extern FreezeFrameStruct FreezeFrame;
 
+// 简易白板（独立于普通批注与 PPT 批注）
+struct WhiteboardStruct
+{
+	bool select;		// 白板是否打开
+	bool backupReady;	// 普通画布内容是否已备份
+};
+extern WhiteboardStruct whiteboard;
+
 // 将标准的 sRGB 值转换为线性 RGB 值
 double sRGBToLinear(double s);
 // 计算相对亮度

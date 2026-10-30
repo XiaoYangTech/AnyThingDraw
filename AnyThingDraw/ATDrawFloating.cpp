@@ -509,6 +509,7 @@ void DrawScreen()
 			atdrawLoadImage(&floating_icon[17], L"PNG", L"icon17", 20, 20, true);
 			atdrawLoadImage(&floating_icon[20], L"PNG", L"icon20", 20, 20, true);
 			atdrawLoadImage(&floating_icon[30], L"PNG", L"icon21", 30, 30, true);	// 鼠标点击（窗口穿透）
+			atdrawLoadImage(&floating_icon[31], L"PNG", L"icon22", 30, 30, true);	// 白板
 
 
 			atdrawLoadImage(&floating_icon[23], L"PNG", L"CustomizeIco3", 40, 40, true); // desktop
@@ -4725,6 +4726,38 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 
 				}
 
+				// 白板按钮
+				if ((int)state == 1)
+				{
+					int wbX = floating_windows.width - 96;
+					int wbY = floating_windows.height - 256 - 44;
+					hiex::EasyX_Gdiplus_FillRoundRect((float)wbX, (float)wbY, 96, 51, 25, 25, RGB(150, 150, 150), BackgroundColorMode == 0 ? RGB(255, 255, 255) : RGB(30, 33, 41), 2, false, SmoothingModeHighQuality, &background);
+
+					if (whiteboard.select)
+					{
+						hiex::EasyX_Gdiplus_RoundRect((float)wbX + 4, (float)wbY + 6, 88, 40, 20, 20, RGBA(98, 175, 82, 255), 2.5, false, SmoothingModeHighQuality, &background);
+						ChangeColor(floating_icon[31], RGBA(98, 175, 82, 255));
+					}
+					else
+					{
+						ChangeColor(floating_icon[31], RGBA(130, 130, 130, 255));
+					}
+					hiex::TransparentImage(&background, wbX + 10, wbY + 10, &floating_icon[31]);
+
+					{
+						Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
+						SolidBrush WordBrush(hiex::ConvertToGdiplusColor(whiteboard.select ? RGBA(98, 175, 82, 255) : RGBA(130, 130, 130, 255), false));
+						graphics.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
+						{
+							words_rect.left = wbX + 40;
+							words_rect.top = wbY + 6;
+							words_rect.right = wbX + 40 + 56;
+							words_rect.bottom = wbY + 6 + 40;
+						}
+						graphics.DrawString(L"白板", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
+					}
+				}
+
 				if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && (int)state == 1)
 				{
 					{
@@ -5002,6 +5035,16 @@ void MouseInteraction()
 					}
 				}
 
+				// 白板
+				if (IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 - 44 + 6, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 - 44 + 6 + 40 }))
+				{
+					if (m.message == WM_LBUTTONDOWN)
+					{
+						ATRDrawWhiteboardToggle();
+						hiex::flushmessage_win32(EM_MOUSE, floating_window);
+						MouseInteractionManipulated = std::chrono::high_resolution_clock::now();
+					}
+				}
 				// 窗口穿透
 				if (IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 + 8, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 + 8 + 40 }))
 				{

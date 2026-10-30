@@ -37,6 +37,8 @@ shared_mutex drawWaitingSm;
 
 IMAGE drawpad; //主画板
 IMAGE window_background;
+IMAGE whiteboardBackup;
+extern ATDrawAtomic<int> PptUiAllReplaceSignal;
 
 HHOOK DrawpadHookCall;
 bool IsHotkeyDown;
@@ -1402,6 +1404,87 @@ void MultiFingerDrawing(LONG pid, TouchMode initialMode, StateModeClass stateInf
 	if (TouchPos.find(pid) != TouchPos.end()) TouchPos.erase(pid);
 	lockPointPosSm.unlock();
 }
+static void WhiteboardResetAnnotations();
+
+// 白板：在绘制/选择/外层循环中都及时应用开关变化
+static void WhiteboardApplyPending()
+{
+	static bool wbApplied = false;
+	if (whiteboard.select == wbApplied) return;
+	wbApplied = whiteboard.select;
+	if (wbApplied)
+	{
+		whiteboardBackup.Resize(drawpad.getwidth(), drawpad.getheight());
+		SetImageColor(whiteboardBackup, RGBA(0, 0, 0, 0), true);
+		hiex::TransparentImage(&whiteboardBackup, 0, 0, &drawpad);
+		whiteboard.backupReady = true;
+		WhiteboardResetAnnotations();
+	}
+	else
+	{
+		WhiteboardResetAnnotations();
+		if (whiteboard.backupReady)
+		{
+			hiex::TransparentImage(&drawpad, 0, 0, &whiteboardBackup);
+			whiteboard.backupReady = false;
+		}
+		reserve_drawpad = true;
+	}
+}
+// 白板：每帧合成时的画布底色
+static void ApplyCanvasBackground(IMAGE& background)
+{
+	if (whiteboard.select) SetImageColor(background, RGB(255, 255, 255), false);
+	else SetImageColor(background, RGBA(0, 0, 0, 1), true);
+}
+// 白板：清空批注并复位撤销栈
+static void WhiteboardResetAnnotations()
+{
+	SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
+	deque<RecallStruct>(RecallImage).swap(RecallImage);
+	RecallImagePeak = 0;
+	FirstDraw = true;
+	recall_image_recond = 0;
+	recall_image_reference = 0;
+	current_record_pointer = 0;
+	reference_record_pointer = 0;
+	extreme_point.clear();
+}
+// 白板开关：切换画布内容 + 暂隐/恢复 PPT 工具栏
+void ATRDrawWhiteboardToggle()
+{
+	whiteboard.select = !whiteboard.select;
+	if (whiteboard.select)
+	{
+		penetrate.select = false;
+		if (FreezeFrame.mode == 2) FreezeFrame.mode = 1;
+	}
+
+	static PptUiWidgetStateEnum stateBeforeWhiteboard = PptUiWidgetStateEnum::Close;
+	if (PptInfoState.TotalPage != -1)
+	{
+		if (whiteboard.select)
+		{
+			stateBeforeWhiteboard = pptUiWidgetState;
+			if (pptUiWidgetState != PptUiWidgetStateEnum::Close)
+			{
+				pptUiWidgetState = PptUiWidgetStateEnum::Close;
+				PptUiAllReplaceSignal = -1;
+			}
+		}
+		else if (stateBeforeWhiteboard != PptUiWidgetStateEnum::Close && pptUiWidgetState == PptUiWidgetStateEnum::Close)
+		{
+			pptUiWidgetState = stateBeforeWhiteboard;
+			PptUiAllReplaceSignal = -1;
+		}
+	}
+
+	if (whiteboard.select && stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
+	{
+		ChangeStateModeToPen();
+	}
+}
+
 void DrawpadDrawing()
 {
 	AnyThingDraw::Thread::StatusGuard guard("DrawpadDrawing");
@@ -1456,6 +1539,8 @@ void DrawpadDrawing()
 	chrono::high_resolution_clock::time_point reckon;
 	for (;;)
 	{
+		WhiteboardApplyPending();
+
 		reckon = chrono::high_resolution_clock::now();
 
 		for (;;)
@@ -1464,7 +1549,8 @@ void DrawpadDrawing()
 			{
 			ChooseEnd:
 				{
-					SetImageColor(window_background, RGBA(0, 0, 0, 0), true);
+					if (whiteboard.select) SetImageColor(window_background, RGB(255, 255, 255), false);
+					else SetImageColor(window_background, RGBA(0, 0, 0, 0), true);
 
 					ulwi.hdcSrc = GetImageHDC(&window_background);
 					UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
@@ -1519,7 +1605,7 @@ void DrawpadDrawing()
 					}
 				}
 
-				if (!RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
+				if (!whiteboard.select && !RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
 				{
 
 					std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
@@ -1556,7 +1642,7 @@ void DrawpadDrawing()
 
 				if (offSignal) goto DrawpadDrawingEnd;
 
-				if (RecallImage.size() >= 1 && PptInfoStateBuffer.TotalPage != -1)
+				if (!whiteboard.select && RecallImage.size() >= 1 && PptInfoStateBuffer.TotalPage != -1)
 				{
 					if (!CompareImagesWithBuffer(&empty_drawpad, &drawpad))
 					{
@@ -1577,6 +1663,7 @@ void DrawpadDrawing()
 				int ppt_switch_count = 0;
 				while (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
 				{
+					WhiteboardApplyPending();
 					this_thread::sleep_for(chrono::milliseconds(50));
 
 					if (PptInfoStateBuffer.CurrentPage != PptInfoState.CurrentPage) PptInfoStateBuffer.CurrentPage = PptInfoState.CurrentPage, ppt_switch_count++;
@@ -1589,14 +1676,14 @@ void DrawpadDrawing()
 				timeBeginPeriod(1);
 
 				{
-					if (PptInfoStateBuffer.TotalPage != -1 && ppt_switch_count != 0 && PptImg.IsSaved[PptInfoStateBuffer.CurrentPage])
+					if (!whiteboard.select && PptInfoStateBuffer.TotalPage != -1 && ppt_switch_count != 0 && PptImg.IsSaved[PptInfoStateBuffer.CurrentPage])
 					{
 						drawpad = PptImg.Image[PptInfoStateBuffer.CurrentPage];
 					}
 					else if (!reserve_drawpad) SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
 					reserve_drawpad = false;
 
-					SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+					ApplyCanvasBackground(window_background);
 					hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 					if (setlist.regularSetting.avoidFullScreen) SetWindowPos(drawpad_window, NULL, MainMonitor.rcMonitor.left, MainMonitor.rcMonitor.top, MainMonitor.MonitorWidth, MainMonitor.MonitorHeight, SWP_NOZORDER | SWP_NOACTIVATE);
@@ -1683,7 +1770,7 @@ void DrawpadDrawing()
 								}
 							}
 
-							if (!RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
+							if (!whiteboard.select && !RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
 							{
 								std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
 								std::unique_lock<std::shared_mutex> LockExtremePointSm(ExtremePointSm);
@@ -1713,7 +1800,7 @@ void DrawpadDrawing()
 								LockStrokeBackImageSm.unlock();
 							}
 
-							if (PptImg.IsSaved[temp_currentpage] == true)
+							if (!whiteboard.select && PptImg.IsSaved[temp_currentpage] == true)
 							{
 								drawpad = PptImg.Image[temp_currentpage];
 							}
@@ -1726,7 +1813,7 @@ void DrawpadDrawing()
 						PptInfoStateBuffer.TotalPage = temp_totalpage;
 
 						{
-							SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+							ApplyCanvasBackground(window_background);
 							hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 							ulwi.hdcSrc = GetImageHDC(&window_background);
@@ -1819,7 +1906,7 @@ void DrawpadDrawing()
 						}
 					}
 
-					if (!RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
+					if (!whiteboard.select && !RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
 					{
 						std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
 						std::unique_lock<std::shared_mutex> LockExtremePointSm(ExtremePointSm);
@@ -1849,7 +1936,7 @@ void DrawpadDrawing()
 						LockStrokeBackImageSm.unlock();
 					}
 
-					if (PptImg.IsSaved[temp_currentpage] == true)
+					if (!whiteboard.select && PptImg.IsSaved[temp_currentpage] == true)
 					{
 						drawpad = PptImg.Image[temp_currentpage];
 					}
@@ -1866,7 +1953,7 @@ void DrawpadDrawing()
 				PptInfoStateBuffer.TotalPage = temp_totalpage;
 
 				{
-					SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+					ApplyCanvasBackground(window_background);
 					hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 					ulwi.hdcSrc = GetImageHDC(&window_background);
@@ -1877,7 +1964,8 @@ void DrawpadDrawing()
 			this_thread::sleep_for(chrono::milliseconds(10));
 		}
 
-		SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+		WhiteboardApplyPending();
+		ApplyCanvasBackground(window_background);
 		std::shared_lock<std::shared_mutex> lock1(StrokeBackImageSm);
 		hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 		lock1.unlock();

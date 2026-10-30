@@ -14,6 +14,7 @@ penetrateStruct penetrate; //窗口穿透
 testStruct test; //调测
 
 FreezeFrameStruct FreezeFrame;
+WhiteboardStruct whiteboard;
 
 // 将标准的 sRGB 值转换为线性 RGB 值
 double sRGBToLinear(double s) {
