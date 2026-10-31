@@ -4812,45 +4812,7 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 							graphics.DrawString(L"冻屏", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
 						}
 					}
-					else if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection)
-					{
-						if (FreezeFrame.mode == 1)
-						{
-							hiex::EasyX_Gdiplus_RoundRect((float)floating_windows.width - 96 + 4, (float)floating_windows.height - 256 + 50, 88, 40, 20, 20, RGBA(98, 175, 82, 255), 2.5, false, SmoothingModeHighQuality, &background);
-
-							ChangeColor(floating_icon[8], RGBA(98, 175, 82, 255));
-
-							hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 54, &floating_icon[8]);
-
-							Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
-							SolidBrush WordBrush(hiex::ConvertToGdiplusColor(RGBA(98, 175, 82, 255), false));
-							graphics.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
-							{
-								words_rect.left = floating_windows.width - 96 + 40;
-								words_rect.top = floating_windows.height - 256 + 50;
-								words_rect.right = floating_windows.width - 96 + 40 + 56;
-								words_rect.bottom = floating_windows.height - 256 + 50 + 40;
-							}
-							graphics.DrawString(L"冻屏", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
-						}
-						else
-						{
-							ChangeColor(floating_icon[8], RGBA(130, 130, 130, 255));
-
-							hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 54, &floating_icon[8]);
-
-							Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
-							SolidBrush WordBrush(hiex::ConvertToGdiplusColor(RGBA(130, 130, 130, 255), false));
-							graphics.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
-							{
-								words_rect.left = floating_windows.width - 96 + 40;
-								words_rect.top = floating_windows.height - 256 + 50;
-								words_rect.right = floating_windows.width - 96 + 40 + 56;
-								words_rect.bottom = floating_windows.height - 256 + 50 + 40;
-							}
-							graphics.DrawString(L"冻屏", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
-						}
-					}
+					
 				}
 
 				if ((stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection || (int)state == 1) && (!RecallImage.empty() || (!FirstDraw && RecallImagePeak == 0)))
@@ -5088,8 +5050,8 @@ void MouseInteraction()
 						MouseInteractionManipulated = std::chrono::high_resolution_clock::now();
 					}
 				}
-				// 窗口定格
-				if (PptInfoState.TotalPage == -1 && IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 + 50, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 + 50 + 40 }))
+				// 窗口定格（仅选择态；批注/橡皮模式下该格是「鼠标」按钮）
+				if (PptInfoState.TotalPage == -1 && stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection && IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 + 50, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 + 50 + 40 }))
 				{
 					if (m.message == WM_LBUTTONDOWN)
 					{
