@@ -17,7 +17,7 @@ struct RecallStruct
 	pair<int, int> recond;
 };
 extern int RecallImagePeak;
-extern deque<RecallStruct> RecallImage;//撤回栈
+extern deque<RecallStruct> RecallImage;//撤销栈
 
 //悬浮窗
 extern IMAGE background;

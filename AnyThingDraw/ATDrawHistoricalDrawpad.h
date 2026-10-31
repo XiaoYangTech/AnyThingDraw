@@ -9,5 +9,5 @@ extern Json::Value record_value;
 //载入记录
 //保存图像到指定目录
 
-// 撤回操作
+// 撤销操作
 void ATDrawRecall();

@@ -19,7 +19,7 @@ Json::Value record_value;
 
 // 载入记录
 // 保存图像到指定目录
-// 撤回操作
+// 撤销操作
 void ATDrawRecall()
 {
 	// 标识绘制等待
@@ -28,7 +28,7 @@ void ATDrawRecall()
 		drawWaiting = true;
 		LockdrawWaitingSm.unlock();
 	}
-	// 防止绘图时撤回冲突
+	// 防止绘图时撤销冲突
 	{
 		std::shared_lock<std::shared_mutex> LockStrokeImageListSm(StrokeImageListSm);
 		bool start = !StrokeImageList.empty();

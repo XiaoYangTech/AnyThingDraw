@@ -404,7 +404,7 @@ void KeyboardInteraction()
 			}
 		}
 
-		// 撤回 Ctrl + Z
+		// 撤销 Ctrl + Z
 		if (m.vkcode == (BYTE)0x5A && m.prevdown && m.message == WM_KEYDOWN)
 		{
 			while (1)
@@ -1437,9 +1437,14 @@ static void WhiteboardApplyPending()
 	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 }
 // 白板：每帧合成时的画布底色
+static int wbBgCount = 0;
 static void ApplyCanvasBackground(IMAGE& background)
 {
-	if (whiteboard.select) SetImageColor(background, RGB(255, 255, 255), false);
+	if (whiteboard.select)
+	{
+		SetImageColor(background, RGB(255, 255, 255), false);
+		if (ATDrawLogger && (wbBgCount++ % 60 == 0)) ATDrawLogger->info("[白板] 白底合成第 " + to_string(wbBgCount) + " 次");
+	}
 	else SetImageColor(background, RGBA(0, 0, 0, 1), true);
 }
 // 白板：清空批注并复位撤销栈
@@ -1485,10 +1490,13 @@ void ATRDrawWhiteboardToggle()
 		}
 	}
 
-	if (whiteboard.select && stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
+	// 白板切换后强制一次「选择 -> 画笔」模式往返，确保画布立即重绘（白底/恢复生效）
+	ChangeStateModeToSelection();
+	for (int i = 0; i < 60 && stateMode.StateModeSelectEcho != StateModeSelectEnum::ATDrawSelection; i++)
 	{
-		ChangeStateModeToPen();
+		this_thread::sleep_for(chrono::milliseconds(10));
 	}
+	ChangeStateModeToPen();
 }
 
 void DrawpadDrawing()

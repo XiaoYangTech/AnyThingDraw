@@ -476,7 +476,7 @@ void SettingMain()
 						IM_ASSERT(ret);
 					}
 
-					atdrawLoadImage(&SettingSign, L"PNG", L"Home_Backgroung", 980 * settingGlobalScale, 768 * settingGlobalScale, true);
+					atdrawLoadImage(&SettingSign, L"PNG", L"Home_Background", 980 * settingGlobalScale, 768 * settingGlobalScale, true);
 					{
 						int width = settingSign[4].width = SettingSign.getwidth();
 						int height = settingSign[4].height = SettingSign.getheight();
@@ -6946,7 +6946,7 @@ void SettingMain()
 						ImFontMain->Scale = 0.6f, PushFontNum++, ImGui::PushFont(ImFontMain);
 						{
 							ImGui::SetCursorPosY(30.0f);
-							wstring text = L"全局快捷键：\nCtrl + Win + Alt 切换选择 / 绘制模式\n\n绘制模式下：\nCtrl + Q 定格\nCtrl + E 穿透\nCtrl + Z 撤回";
+							wstring text = L"全局快捷键：\nCtrl + Win + Alt 切换选择 / 绘制模式\n\n绘制模式下：\nCtrl + Q 定格\nCtrl + E 穿透\nCtrl + Z 撤销";
 
 							int left_x = 20 * settingGlobalScale, right_x = 750 * settingGlobalScale;
 
@@ -7216,12 +7216,12 @@ void SettingMain()
 									text += to_wstring(TouchTemp[i].pid) + L" ";
 								}
 
-								text += L"\n\n撤回库当前大小：" + to_wstring(RecallImage.size()) + L"(峰值" + to_wstring(RecallImagePeak) + L")";
-								/*text += L"\n撤回库 recall_image_recond：" + to_wstring(recall_image_recond);
-								text += L"\n撤回库 reference_record_pointer：" + to_wstring(reference_record_pointer);
-								text += L"\n撤回库 practical_total_record_pointer：" + to_wstring(practical_total_record_pointer);
-								text += L"\n撤回库 total_record_pointer：" + to_wstring(total_record_pointer);
-								text += L"\n撤回库 current_record_pointer：" + to_wstring(current_record_pointer);*/
+								text += L"\n\n撤销库当前大小：" + to_wstring(RecallImage.size()) + L"(峰值" + to_wstring(RecallImagePeak) + L")";
+								/*text += L"\n撤销库 recall_image_recond：" + to_wstring(recall_image_recond);
+								text += L"\n撤销库 reference_record_pointer：" + to_wstring(reference_record_pointer);
+								text += L"\n撤销库 practical_total_record_pointer：" + to_wstring(practical_total_record_pointer);
+								text += L"\n撤销库 total_record_pointer：" + to_wstring(total_record_pointer);
+								text += L"\n撤销库 current_record_pointer：" + to_wstring(current_record_pointer);*/
 								text += L"\n首次绘制状态：", text += (FirstDraw == true) ? L"是" : L"否";
 
 								{

@@ -120,7 +120,7 @@ HOME2_ZH-CN             PNG                     "src\\setting\\Home2_zh-CN.png"
 
 PROFILE_PICTURE         PNG                     "src\\setting\\Profile_Picture.png"
 
-HOME_BACKGROUNG         PNG                     "src\\setting\\Home_Backgroung.png"
+HOME_BACKGROUND         PNG                     "src\\setting\\Home_Background.png"
 
 
 PLUGINFLAG3             PNG                     "src\\PluginFlag3.png"

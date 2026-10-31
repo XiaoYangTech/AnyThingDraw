@@ -8,7 +8,7 @@ shared_mutex RecallImageManipulatedSm;
 chrono::high_resolution_clock::time_point RecallImageManipulated;
 
 int RecallImagePeak = 0;
-deque<RecallStruct> RecallImage;//撤回栈
+deque<RecallStruct> RecallImage;//撤销栈
 
 //悬浮窗
 IMAGE background(576, 386);
