@@ -196,6 +196,7 @@ IMAGE PptWindowBackground; // PPT 窗口背景画布
 
 ATDrawAtomic<bool> PptUiChangeSignal;
 ATDrawAtomic<int> PptUiAllReplaceSignal;
+chrono::steady_clock::time_point LastEndShowPromptTime = chrono::steady_clock::time_point();
 
 // -------------------------
 // ppt 信息
@@ -2481,7 +2482,8 @@ void PptInfo()
 					{
 						LogForegroundWindowDetail(L"自动结束放映触发");
 					ATDrawLogger->info("[PPT] 连续检测到放映窗口不在前台，结束放映（切出检测防抖已确认）");
-						if (pptComSetlist.exitShowOnFocusLost && !CheckEndShow.isChecking) EndPptShow();	// 弹框期间不自动结束放映
+						bool recentPrompt = chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now() - LastEndShowPromptTime).count() < 1500;
+						if (pptComSetlist.exitShowOnFocusLost && !CheckEndShow.isChecking && !recentPrompt) EndPptShow();	// 弹框期间不自动结束放映
 						focusLostCount = 0;
 					}
 				}
@@ -4463,10 +4465,12 @@ bool CheckEndShowClass::Check()
 
 	bool ret = (MessageBox(floating_window, L"当前处于绘制模式，继续结束放映将会清空画布内容。\n确定结束放映？", L"亿方万能画笔提示", MB_SYSTEMMODAL | MB_OKCANCEL) == IDOK);
 
+	LastEndShowPromptTime = chrono::steady_clock::now();
 	isChecking = false;
+	// 取消：把焦点还给放映窗口，避免"切出检测"把放映当成被切走而自动结束
+	if (!ret) FocusPptShow();
 	return ret;
-}
-CheckEndShowClass CheckEndShow;
+}CheckEndShowClass CheckEndShow;
 
 // --------------------------------------------------
 // 其他插件

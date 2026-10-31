@@ -68,6 +68,16 @@ LRESULT CALLBACK DrawpadHookCallback(int nCode, WPARAM wParam, LPARAM lParam)
 		// 全局状态变量
 		bool checkEndShowIsChecking = CheckEndShow.isChecking;
 
+		// 放映中 ESC 不允许透传给 PowerPoint（否则 PPT 会绕过确认框自行退出放映）
+		// 确认框（#32770）获得焦点时放行，保证对话框能收到 ESC
+		if (PptInfoState.TotalPage != -1 && pKeyInfo->vkCode == VK_ESCAPE)
+		{
+			wchar_t fgClass[32] = { 0 };
+			HWND fgWindow = GetForegroundWindow();
+			if (fgWindow) GetClassNameW(fgWindow, fgClass, 32);
+			if (wcscmp(fgClass, L"#32770") != 0) return 1;
+		}
+
 		// PPT模式：按键反馈
 		if (PptInfoState.TotalPage != -1 && !checkEndShowIsChecking)
 		{
