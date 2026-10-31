@@ -1437,13 +1437,11 @@ static void WhiteboardApplyPending()
 	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 }
 // 白板：每帧合成时的画布底色
-static int wbBgCount = 0;
 static void ApplyCanvasBackground(IMAGE& background)
 {
 	if (whiteboard.select)
 	{
 		SetImageColor(background, RGB(255, 255, 255), false);
-		if (ATDrawLogger && (wbBgCount++ % 60 == 0)) ATDrawLogger->info("[白板] 白底合成第 " + to_string(wbBgCount) + " 次");
 	}
 	else SetImageColor(background, RGBA(0, 0, 0, 1), true);
 }
