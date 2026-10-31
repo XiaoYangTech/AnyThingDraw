@@ -4745,19 +4745,22 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 				}
 			}
 
-								// 侧栏常驻按钮：白板 / 鼠标 / 冻屏（同一容器、竖向对齐）
+												// 侧栏常驻按钮：选择态=白板+冻屏；批注态=白板+鼠标+冻屏（统一对齐）
 				if ((int)state == 1)
 				{
+					const bool swSel = (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection);
 					const float swX = (float)floating_windows.width - 96;
-					const float swY0 = (float)floating_windows.height - 256 - 34;	// 白板
-					const float swY1 = (float)floating_windows.height - 256 + 8;	// 鼠标
-					const float swY2 = (float)floating_windows.height - 256 + 50;	// 冻屏
+					const float wbY = swSel ? (float)floating_windows.height - 256 + 8 : (float)floating_windows.height - 256 - 34;
+					const float msY = (float)floating_windows.height - 256 + 8;
+					const float fzY = (float)floating_windows.height - 256 + 50;
+					const float swBoxTop = swSel ? (float)floating_windows.height - 257 : (float)floating_windows.height - 256 - 42;
+					const float swBoxH = swSel ? 96.0f : 138.0f;
 
-					hiex::EasyX_Gdiplus_FillRoundRect(swX, swY0 - 8.0f, 96, 138, 25, 25, RGB(150, 150, 150), BackgroundColorMode == 0 ? RGB(255, 255, 255) : RGB(30, 33, 41), 2, false, SmoothingModeHighQuality, &background);
+					hiex::EasyX_Gdiplus_FillRoundRect(swX, swBoxTop, 96, swBoxH, 25, 25, RGB(150, 150, 150), BackgroundColorMode == 0 ? RGB(255, 255, 255) : RGB(30, 33, 41), 2, false, SmoothingModeHighQuality, &background);
 
 					auto drawSideButton = [&](float y, IMAGE* icon, const wchar_t* label, bool active)
 						{
-							if (active) hiex::EasyX_Gdiplus_RoundRect(swX + 4, y + 6, 88, 40, 20, 20, RGBA(98, 175, 82, 255), 2.5, false, SmoothingModeHighQuality, &background);
+							if (active) hiex::EasyX_Gdiplus_RoundRect(swX + 4, y, 88, 40, 20, 20, RGBA(98, 175, 82, 255), 2.5, false, SmoothingModeHighQuality, &background);
 							ChangeColor(*icon, active ? RGBA(98, 175, 82, 255) : RGBA(130, 130, 130, 255));
 							hiex::TransparentImage(&background, (int)swX + 10, (int)y + 4, icon);
 							Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
@@ -4770,9 +4773,10 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 							graphics.DrawString(label, -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
 						};
 
-					drawSideButton(swY0, &floating_icon[31], L"白板", whiteboard.select);
-					drawSideButton(swY1, &floating_icon[30], L"鼠标", penetrate.select);
-					drawSideButton(swY2, &floating_icon[8], L"冻屏", FreezeFrame.mode == 1);
+					const bool swWb = whiteboard.select;
+					drawSideButton(wbY, &floating_icon[31], L"白板", swWb);
+					if (!swSel) drawSideButton(msY, &floating_icon[30], L"鼠标", !swWb && penetrate.select);
+					drawSideButton(fzY, &floating_icon[8], L"冻屏", !swWb && FreezeFrame.mode == 1);
 				}
 
 			//更新窗口
@@ -4828,7 +4832,9 @@ void MouseInteraction()
 		// 白板按钮：优先处理（选择态占上格、绘制态占下格）
 		if ((int)state == 1)
 		{
-			int wbHitY = floating_windows.height - 256 - 34;
+			int wbHitY = (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
+				? (floating_windows.height - 256 + 8)
+				: (floating_windows.height - 256 - 34);
 			if (IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, wbHitY, floating_windows.width - 96 + 4 + 88, wbHitY + 40 }))
 			{
 				if (m.message == WM_LBUTTONDOWN)
@@ -4924,7 +4930,7 @@ void MouseInteraction()
 				// 窗口穿透
 				if (IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 + 8, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 + 8 + 40 }))
 				{
-					if (m.message == WM_LBUTTONDOWN)
+					if (!whiteboard.select && m.message == WM_LBUTTONDOWN)
 					{
 						lx = m.x, ly = m.y;
 						while (1)
@@ -4966,7 +4972,7 @@ void MouseInteraction()
 				// 窗口定格
 				if (PptInfoState.TotalPage == -1 && IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 + 50, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 + 50 + 40 }))
 				{
-					if (m.message == WM_LBUTTONDOWN)
+					if (!whiteboard.select && m.message == WM_LBUTTONDOWN)
 					{
 						lx = m.x, ly = m.y;
 						while (1)

@@ -1466,7 +1466,8 @@ void ATRDrawWhiteboardToggle()
 	if (whiteboard.select)
 	{
 		penetrate.select = false;
-		if (FreezeFrame.mode == 2) FreezeFrame.mode = 1;
+		FreezeFrame.mode = 0;
+		FreezeFrame.select = false;
 	}
 
 	static PptUiWidgetStateEnum stateBeforeWhiteboard = PptUiWidgetStateEnum::Close;
