@@ -4726,35 +4726,6 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 
 				}
 
-				// 白板按钮（与鼠标/冻屏同一容器：选择态占上格、绘制态占下格）
-				if ((int)state == 1)
-				{
-					bool wbSelectionSlot = (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection);
-					float wbX = (float)floating_windows.width - 96 + 4;
-					float wbY = (float)floating_windows.height - 256 + (wbSelectionSlot ? 8.0f : 50.0f);
-					if (whiteboard.select)
-					{
-						hiex::EasyX_Gdiplus_RoundRect(wbX, wbY, 88, 40, 20, 20, RGBA(98, 175, 82, 255), 2.5, false, SmoothingModeHighQuality, &background);
-						ChangeColor(floating_icon[31], RGBA(98, 175, 82, 255));
-					}
-					else
-					{
-						ChangeColor(floating_icon[31], RGBA(130, 130, 130, 255));
-					}
-					hiex::TransparentImage(&background, (int)wbX + 10, (int)wbY + 5, &floating_icon[31]);
-
-					{
-						Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
-						SolidBrush WordBrush(hiex::ConvertToGdiplusColor(whiteboard.select ? RGBA(98, 175, 82, 255) : RGBA(130, 130, 130, 255), false));
-						graphics.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
-						words_rect.left = (int)wbX + 40;
-						words_rect.top = (int)wbY + 6;
-						words_rect.right = (int)wbX + 40 + 56;
-						words_rect.bottom = (int)wbY + 6 + 40;
-						graphics.DrawString(L"白板", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
-					}
-				}
-
 				if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && (int)state == 1)
 				{
 					{
@@ -4763,20 +4734,20 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 
 					if (penetrate.select == true)
 					{
-						hiex::EasyX_Gdiplus_RoundRect((float)floating_windows.width - 96 + 4, (float)floating_windows.height - 256 + 8, 88, 40, 20, 20, RGBA(98, 175, 82, 255), 2.5, false, SmoothingModeHighQuality, &background);
+						hiex::EasyX_Gdiplus_RoundRect((float)floating_windows.width - 96 + 4, (float)floating_windows.height - 256 + 50, 88, 40, 20, 20, RGBA(98, 175, 82, 255), 2.5, false, SmoothingModeHighQuality, &background);
 
 						ChangeColor(floating_icon[30], RGBA(98, 175, 82, 255));
 
-						hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 12, &floating_icon[30]);
+						hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 54, &floating_icon[30]);
 
 						Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
 						SolidBrush WordBrush(hiex::ConvertToGdiplusColor(RGBA(98, 175, 82, 255), false));
 						graphics.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
 						{
 							words_rect.left = floating_windows.width - 96 + 40;
-							words_rect.top = floating_windows.height - 256 + 8;
+							words_rect.top = floating_windows.height - 256 + 50;
 							words_rect.right = floating_windows.width - 96 + 40 + 56;
-							words_rect.bottom = floating_windows.height - 256 + 8 + 40;
+							words_rect.bottom = floating_windows.height - 256 + 50 + 40;
 						}
 						graphics.DrawString(L"鼠标", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
 					}
@@ -4784,16 +4755,16 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 					{
 						ChangeColor(floating_icon[30], RGBA(130, 130, 130, 255));
 
-						hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 12, &floating_icon[30]);
+						hiex::TransparentImage(&background, floating_windows.width - 96 + 10, floating_windows.height - 256 + 54, &floating_icon[30]);
 
 						Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
 						SolidBrush WordBrush(hiex::ConvertToGdiplusColor(RGBA(130, 130, 130, 255), false));
 						graphics.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
 						{
 							words_rect.left = floating_windows.width - 96 + 40;
-							words_rect.top = floating_windows.height - 256 + 8;
+							words_rect.top = floating_windows.height - 256 + 50;
 							words_rect.right = floating_windows.width - 96 + 40 + 56;
-							words_rect.bottom = floating_windows.height - 256 + 8 + 40;
+							words_rect.bottom = floating_windows.height - 256 + 50 + 40;
 						}
 						graphics.DrawString(L"鼠标", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
 					}
@@ -4901,6 +4872,34 @@ if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection && stateMo
 				}
 			}
 
+				// 白板按钮（与鼠标/冻屏同一容器：选择态占上格、绘制态占下格）
+				if ((int)state == 1)
+				{
+					float wbX = (float)floating_windows.width - 96 + 4;
+					float wbY = (float)floating_windows.height - 256 + 8;
+					if (whiteboard.select)
+					{
+						hiex::EasyX_Gdiplus_RoundRect(wbX, wbY, 88, 40, 20, 20, RGBA(98, 175, 82, 255), 2.5, false, SmoothingModeHighQuality, &background);
+						ChangeColor(floating_icon[31], RGBA(98, 175, 82, 255));
+					}
+					else
+					{
+						ChangeColor(floating_icon[31], RGBA(130, 130, 130, 255));
+					}
+					hiex::TransparentImage(&background, (int)wbX + 10, (int)wbY + 5, &floating_icon[31]);
+
+					{
+						Gdiplus::Font gp_font(&HarmonyOS_fontFamily, 20, FontStyleRegular, UnitPixel);
+						SolidBrush WordBrush(hiex::ConvertToGdiplusColor(whiteboard.select ? RGBA(98, 175, 82, 255) : RGBA(130, 130, 130, 255), false));
+						graphics.SetTextRenderingHint(TextRenderingHintAntiAliasGridFit);
+						words_rect.left = (int)wbX + 40;
+						words_rect.top = (int)wbY + 6;
+						words_rect.right = (int)wbX + 40 + 56;
+						words_rect.bottom = (int)wbY + 6 + 40;
+						graphics.DrawString(L"白板", -1, &gp_font, hiex::RECTToRectF(words_rect), &stringFormat, &WordBrush);
+					}
+				}
+
 			//更新窗口
 			{
 				// 设置窗口位置
@@ -4954,9 +4953,7 @@ void MouseInteraction()
 		// 白板按钮：优先处理（选择态占上格、绘制态占下格）
 		if ((int)state == 1)
 		{
-			int wbHitY = (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
-				? (floating_windows.height - 256 + 8)
-				: (floating_windows.height - 256 + 50);
+			int wbHitY = floating_windows.height - 256 + 8;
 			if (IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, wbHitY, floating_windows.width - 96 + 4 + 88, wbHitY + 40 }))
 			{
 				if (m.message == WM_LBUTTONDOWN)
@@ -5050,7 +5047,7 @@ void MouseInteraction()
 				}
 
 				// 窗口穿透
-				if (IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 + 8, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 + 8 + 40 }))
+				if (IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 + 50, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 + 50 + 40 }))
 				{
 					if (m.message == WM_LBUTTONDOWN)
 					{
@@ -5058,7 +5055,7 @@ void MouseInteraction()
 						while (1)
 						{
 							ExMessage m = hiex::getmessage_win32(EM_MOUSE, floating_window);
-							if (IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 + 8, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 + 8 + 40 }))
+							if (IsInRect(m.x, m.y, { floating_windows.width - 96 + 4, floating_windows.height - 256 + 50, floating_windows.width - 96 + 4 + 88, floating_windows.height - 256 + 50 + 40 }))
 							{
 								if (!m.lbutton)
 								{

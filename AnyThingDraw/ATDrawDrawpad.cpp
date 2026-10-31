@@ -1547,6 +1547,7 @@ void DrawpadDrawing()
 
 		for (;;)
 		{
+			WhiteboardApplyPending();
 			if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
 			{
 			ChooseEnd:
