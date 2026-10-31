@@ -37,7 +37,8 @@ shared_mutex drawWaitingSm;
 
 IMAGE drawpad; //主画板
 IMAGE window_background;
-IMAGE whiteboardBackup;
+IMAGE whiteboardCanvas;	// 白板专用独立画布
+bool whiteboardSwapped = false;	// 当前 drawpad 是否已切换为白板画布
 extern ATDrawAtomic<int> PptUiAllReplaceSignal;
 
 HHOOK DrawpadHookCall;
@@ -1404,35 +1405,53 @@ void MultiFingerDrawing(LONG pid, TouchMode initialMode, StateModeClass stateInf
 	if (TouchPos.find(pid) != TouchPos.end()) TouchPos.erase(pid);
 	lockPointPosSm.unlock();
 }
-static void WhiteboardResetAnnotations();
 static void ApplyCanvasBackground(IMAGE& background);
 
-// 白板：在绘制/选择/外层循环中都及时应用开关变化
+// 白板：重置撤销栈（不触碰画布内容）
+static void WhiteboardResetHistory()
+{
+	deque<RecallStruct>(RecallImage).swap(RecallImage);
+	RecallImagePeak = 0;
+	FirstDraw = true;
+	recall_image_recond = 0;
+	recall_image_reference = 0;
+	current_record_pointer = 0;
+	reference_record_pointer = 0;
+	extreme_point.clear();
+}
+// 白板：切换独立画布（白板与普通/PPT 画布不共用同一 HBITMAP，彻底隔离批注）
 static void WhiteboardApplyPending()
 {
 	static bool wbApplied = false;
 	if (whiteboard.select == wbApplied) return;
 	wbApplied = whiteboard.select;
-	if (ATDrawLogger) ATDrawLogger->info(("[白板] 应用 -> " + string(wbApplied ? "开（备份画布并清空）" : "关（清空前恢复画布）")).c_str());
+	if (ATDrawLogger) ATDrawLogger->info(("[白板] 应用 -> " + string(wbApplied ? "开（切换到白板画布）" : "关（切回普通/PPT 画布）")).c_str());
+
 	if (wbApplied)
 	{
-		whiteboardBackup.Resize(drawpad.getwidth(), drawpad.getheight());
-		SetImageColor(whiteboardBackup, RGBA(0, 0, 0, 0), true);
-		hiex::TransparentImage(&whiteboardBackup, 0, 0, &drawpad);
-		whiteboard.backupReady = true;
-		WhiteboardResetAnnotations();
+		whiteboardCanvas.Resize(drawpad.getwidth(), drawpad.getheight());
+		SetImageColor(whiteboardCanvas, RGBA(0, 0, 0, 0), true);
+		IMAGE tmp = drawpad;
+		drawpad = whiteboardCanvas;
+		whiteboardCanvas = tmp;
+		whiteboardSwapped = true;
+		SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
+		WhiteboardResetHistory();
 	}
 	else
 	{
-		WhiteboardResetAnnotations();
-		if (whiteboard.backupReady)
+		if (whiteboardSwapped)
 		{
-			hiex::TransparentImage(&drawpad, 0, 0, &whiteboardBackup);
-			whiteboard.backupReady = false;
+			IMAGE tmp = drawpad;
+			drawpad = whiteboardCanvas;
+			whiteboardCanvas = tmp;
+			whiteboardSwapped = false;
 		}
+		WhiteboardResetHistory();
 		reserve_drawpad = true;
 	}
-	// 立即重合成画布底色并刷新分层窗口，避免依赖模式切换触发重绘（否则取消选中瞬间白幕残留）
+
+	// 立即重合成画布底色并刷新分层窗口
 	ApplyCanvasBackground(window_background);
 	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 	{
@@ -1461,24 +1480,8 @@ static void WhiteboardApplyPending()
 // 白板：每帧合成时的画布底色
 static void ApplyCanvasBackground(IMAGE& background)
 {
-	if (whiteboard.select)
-	{
-		SetImageColor(background, RGB(255, 255, 255), false);
-	}
+	if (whiteboard.select) SetImageColor(background, RGB(255, 255, 255), false);
 	else SetImageColor(background, RGBA(0, 0, 0, 1), true);
-}
-// 白板：清空批注并复位撤销栈
-static void WhiteboardResetAnnotations()
-{
-	SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
-	deque<RecallStruct>(RecallImage).swap(RecallImage);
-	RecallImagePeak = 0;
-	FirstDraw = true;
-	recall_image_recond = 0;
-	recall_image_reference = 0;
-	current_record_pointer = 0;
-	reference_record_pointer = 0;
-	extreme_point.clear();
 }
 // 白板开关：切换画布内容 + 暂隐/恢复 PPT 工具栏
 void ATRDrawWhiteboardToggle()
@@ -1511,6 +1514,11 @@ void ATRDrawWhiteboardToggle()
 		}
 	}
 
+	// 打开白板时若处于选择态，切到画笔以便直接书写
+	if (whiteboard.select && stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
+	{
+		ChangeStateModeToPen();
+	}
 }
 
 void DrawpadDrawing()
@@ -1577,6 +1585,8 @@ void DrawpadDrawing()
 			if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
 			{
 			ChooseEnd:
+				// 进入选择态自动关闭白板，避免白幕滞留并拦截桌面点击
+				if (whiteboard.select) whiteboard.select = false;
 				{
 					if (whiteboard.select) SetImageColor(window_background, RGB(255, 255, 255), false);
 					else SetImageColor(window_background, RGBA(0, 0, 0, 0), true);
