@@ -5024,6 +5024,7 @@ void MouseInteraction()
 								if (!m.lbutton)
 								{
 									state = 1;
+									if (whiteboard.select) ATRDrawWhiteboardClear();
 									if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection) ChangeStateModeToSelection();
 
 									break;

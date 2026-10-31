@@ -42,6 +42,7 @@ bool whiteboardSwapped = false;	// 当前 drawpad 是否已切换为白板画布
 bool whiteboardClearRequest = false;	// 白板清空请求（鼠标线程置位，绘制线程执行）
 bool canvasClearRequest = false;	// 画布清空请求（橡皮清空链路专用，不切换模式）
 bool whiteboardCanvasActive = false;	// 白板画布是否已实际切换到 drawpad
+bool whiteboardDiscardAfterClose = false;	// 关闭白板后丢弃原画布（PPT 已结束时用）
 extern ATDrawAtomic<int> PptUiAllReplaceSignal;
 
 HHOOK DrawpadHookCall;
@@ -1453,6 +1454,12 @@ void ATRDrawWhiteboardClear()
 {
 	whiteboardClearRequest = true;
 }
+// 白板销毁：关闭白板并丢弃原画布（PPT 已结束等场景，避免把旧 PPT 批注带回桌面）
+void ATRDrawWhiteboardDestroy()
+{
+	whiteboard.select = false;
+	whiteboardDiscardAfterClose = true;
+}
 // 画布清空（橡皮清空链路专用，不切换选择态）
 void ATRDrawCanvasClear()
 {
@@ -1519,6 +1526,12 @@ static void WhiteboardApplyPending()
 		WhiteboardResetHistory();
 		whiteboardCanvasActive = false;
 		reserve_drawpad = true;
+		if (whiteboardDiscardAfterClose)
+		{
+			SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
+			WhiteboardResetHistory();
+			whiteboardDiscardAfterClose = false;
+		}
 	}
 
 	WhiteboardRefreshLayered();

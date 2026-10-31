@@ -2437,7 +2437,7 @@ void PptInfo()
 			PptUiAllReplaceSignal = -1;
 
 			// 放映结束：白板是临时画布，一并销毁，避免白幕残留在屏幕上
-			if (whiteboard.select) whiteboard.select = false;
+			if (whiteboard.select) ATRDrawWhiteboardDestroy();
 
 			PptImg.IsSave = false;
 			PptImg.IsSaved.clear();
