@@ -339,6 +339,8 @@ void KeyboardInteraction()
 			}
 			else if (m.message == WM_KEYDOWN && m.vkcode == VK_ESCAPE)
 			{
+				// 白板下退出放映：白板是临时画布，退出即销毁，回到可正常操作的选择态
+				if (PptInfoState.TotalPage != -1 && whiteboard.select) ATRDrawWhiteboardDestroy();
 				auto vkcode = m.vkcode;
 
 				while (ATDrawInputs::IsKeyBoardDown(vkcode)) this_thread::sleep_for(chrono::milliseconds(20));
@@ -1427,7 +1429,7 @@ static void WhiteboardResetHistory()
 static void WhiteboardRefreshLayered()
 {
 	ApplyCanvasBackground(window_background);
-	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+	if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 	BLENDFUNCTION wbBlend;
 	wbBlend.BlendOp = AC_SRC_OVER;
 	wbBlend.BlendFlags = 0;
@@ -1781,7 +1783,7 @@ void DrawpadDrawing()
 					reserve_drawpad = false;
 
 					ApplyCanvasBackground(window_background);
-					hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+					if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 					if (setlist.regularSetting.avoidFullScreen) SetWindowPos(drawpad_window, NULL, MainMonitor.rcMonitor.left, MainMonitor.rcMonitor.top, MainMonitor.MonitorWidth, MainMonitor.MonitorHeight, SWP_NOZORDER | SWP_NOACTIVATE);
 
@@ -1911,7 +1913,7 @@ void DrawpadDrawing()
 
 						{
 							ApplyCanvasBackground(window_background);
-							hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+							if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 							ulwi.hdcSrc = GetImageHDC(&window_background);
 							UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
@@ -2051,7 +2053,7 @@ void DrawpadDrawing()
 
 				{
 					ApplyCanvasBackground(window_background);
-					hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+					if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 					ulwi.hdcSrc = GetImageHDC(&window_background);
 					UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
@@ -2064,7 +2066,7 @@ void DrawpadDrawing()
 		WhiteboardApplyPending();
 		ApplyCanvasBackground(window_background);
 		std::shared_lock<std::shared_mutex> lock1(StrokeBackImageSm);
-		hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+		if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 		lock1.unlock();
 
 		std::shared_lock<std::shared_mutex> lock2(StrokeImageListSm);
