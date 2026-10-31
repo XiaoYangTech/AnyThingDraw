@@ -1632,8 +1632,9 @@ void DrawpadDrawing()
 			{
 			ChooseEnd:
 				{
-					// 选择态：不显示白幕（白板画布保留，方便点桌面/关闭弹窗），切回批注恢复白板
-					SetImageColor(window_background, RGBA(0, 0, 0, 0), true);
+					// 画板下的选择态：白板画布保持显示（不透明），只是切到选择模式
+					if (whiteboard.select) SetImageColor(window_background, RGB(255, 255, 255), false);
+					else SetImageColor(window_background, RGBA(0, 0, 0, 0), true);
 
 					ulwi.hdcSrc = GetImageHDC(&window_background);
 					UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
