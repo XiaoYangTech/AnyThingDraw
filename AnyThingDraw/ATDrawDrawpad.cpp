@@ -339,8 +339,6 @@ void KeyboardInteraction()
 			}
 			else if (m.message == WM_KEYDOWN && m.vkcode == VK_ESCAPE)
 			{
-				// 白板下退出放映：白板是临时画布，退出即销毁，回到可正常操作的选择态
-				if (PptInfoState.TotalPage != -1 && whiteboard.select) ATRDrawWhiteboardDestroy();
 				auto vkcode = m.vkcode;
 
 				while (ATDrawInputs::IsKeyBoardDown(vkcode)) this_thread::sleep_for(chrono::milliseconds(20));
@@ -349,11 +347,17 @@ void KeyboardInteraction()
 				{
 					if (CheckEndShow.Check())
 					{
+						// 已确认结束放映：白板按临时画布销毁
+						if (PptInfoState.TotalPage != -1 && whiteboard.select) ATRDrawWhiteboardDestroy();
 						ChangeStateModeToSelection();
 						EndPptShow();
 					}
 				}
-				else EndPptShow();
+				else
+				{
+					if (PptInfoState.TotalPage != -1 && whiteboard.select) ATRDrawWhiteboardDestroy();
+					EndPptShow();
+				}
 			}
 		}
 
@@ -1467,6 +1471,70 @@ void ATRDrawCanvasClear()
 {
 	canvasClearRequest = true;
 }
+// 白板：独立撤销栈（进入白板暂存普通/PPT 历史，白板历史退出即销毁）
+struct RecallContextSnapshot
+{
+	deque<RecallStruct> stack;
+	int peak = 0;
+	int recond = 0;
+	int reference = 0;
+	int currentPtr = 0;
+	int referencePtr = 0;
+	bool firstDraw = true;
+	map<pair<int, int>, bool> extreme;
+	bool valid = false;
+};
+static RecallContextSnapshot normalRecallContext;
+
+static void WhiteboardSaveNormalRecall()
+{
+	normalRecallContext.stack = std::move(RecallImage);
+	normalRecallContext.peak = RecallImagePeak;
+	normalRecallContext.recond = recall_image_recond;
+	normalRecallContext.reference = recall_image_reference;
+	normalRecallContext.currentPtr = current_record_pointer;
+	normalRecallContext.referencePtr = reference_record_pointer;
+	normalRecallContext.firstDraw = FirstDraw;
+	normalRecallContext.extreme = extreme_point;
+	normalRecallContext.valid = true;
+
+	RecallImagePeak = 0;
+	recall_image_recond = 0;
+	recall_image_reference = 0;
+	current_record_pointer = 0;
+	reference_record_pointer = 0;
+	extreme_point.clear();
+	FirstDraw = true;
+}
+
+static void WhiteboardRestoreNormalRecall()
+{
+	// 先销毁白板临时撤销历史
+	deque<RecallStruct>(RecallImage).swap(RecallImage);
+	RecallImagePeak = 0;
+	recall_image_recond = 0;
+	recall_image_reference = 0;
+	current_record_pointer = 0;
+	reference_record_pointer = 0;
+	extreme_point.clear();
+	FirstDraw = true;
+
+	if (normalRecallContext.valid)
+	{
+		RecallImage = std::move(normalRecallContext.stack);
+		RecallImagePeak = normalRecallContext.peak;
+		recall_image_recond = normalRecallContext.recond;
+		recall_image_reference = normalRecallContext.reference;
+		current_record_pointer = normalRecallContext.currentPtr;
+		reference_record_pointer = normalRecallContext.referencePtr;
+		FirstDraw = normalRecallContext.firstDraw;
+		extreme_point = normalRecallContext.extreme;
+		normalRecallContext.stack.clear();
+		normalRecallContext.extreme.clear();
+		normalRecallContext.valid = false;
+	}
+}
+
 // 白板：切换独立画布（白板与普通/PPT 画布不共用同一 HBITMAP，彻底隔离批注）
 static void WhiteboardApplyPending()
 {
@@ -1511,7 +1579,7 @@ static void WhiteboardApplyPending()
 		whiteboardCanvas = tmp;
 		whiteboardSwapped = true;
 		SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
-		WhiteboardResetHistory();
+		WhiteboardSaveNormalRecall();
 		whiteboardCanvasActive = true;
 	}
 	else
@@ -1525,7 +1593,7 @@ static void WhiteboardApplyPending()
 			// 白板是临时画布：退出即销毁内容
 			SetImageColor(whiteboardCanvas, RGBA(0, 0, 0, 0), true);
 		}
-		WhiteboardResetHistory();
+		WhiteboardRestoreNormalRecall();
 		whiteboardCanvasActive = false;
 		reserve_drawpad = true;
 		if (whiteboardDiscardAfterClose)

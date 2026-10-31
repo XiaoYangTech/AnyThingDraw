@@ -22,8 +22,8 @@ Json::Value record_value;
 // 撤销操作
 void ATDrawRecall()
 {
-	// 白板是临时画布：不参与撤销历史（退出即销毁），避免撤回到普通/PPT 批注
-	if (whiteboard.select) return;
+	// 白板切换尚未生效时忽略撤销，避免跨画布串历史（生效后白板有独立撤销栈）
+	if (whiteboard.select != whiteboardCanvasActive) return;
 	// 标识绘制等待
 	{
 		unique_lock<shared_mutex> LockdrawWaitingSm(drawWaitingSm);
