@@ -1432,9 +1432,31 @@ static void WhiteboardApplyPending()
 		}
 		reserve_drawpad = true;
 	}
-	// 立即重合成画布底色，避免绘制循环里沿用旧的白底（否则关闭后白幕残留到切换模式）
+	// 立即重合成画布底色并刷新分层窗口，避免依赖模式切换触发重绘（否则取消选中瞬间白幕残留）
 	ApplyCanvasBackground(window_background);
 	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+	{
+		BLENDFUNCTION wbBlend;
+		wbBlend.BlendOp = AC_SRC_OVER;
+		wbBlend.BlendFlags = 0;
+		wbBlend.SourceConstantAlpha = 255;
+		wbBlend.AlphaFormat = AC_SRC_ALPHA;
+		HDC wbScreen = GetDC(NULL);
+		POINT wbSrc = { 0, 0 }, wbDst = { 0, 0 };
+		SIZE wbSize = { window_background.getwidth(), window_background.getheight() };
+		UPDATELAYEREDWINDOWINFO wbUlwi = { 0 };
+		wbUlwi.cbSize = sizeof(wbUlwi);
+		wbUlwi.hdcDst = wbScreen;
+		wbUlwi.pptDst = &wbDst;
+		wbUlwi.psize = &wbSize;
+		wbUlwi.pptSrc = &wbSrc;
+		wbUlwi.crKey = 0;
+		wbUlwi.pblend = &wbBlend;
+		wbUlwi.dwFlags = ULW_ALPHA;
+		wbUlwi.hdcSrc = GetImageHDC(&window_background);
+		UpdateLayeredWindowIndirect(drawpad_window, &wbUlwi);
+		if (wbScreen) ReleaseDC(NULL, wbScreen);
+	}
 }
 // 白板：每帧合成时的画布底色
 static void ApplyCanvasBackground(IMAGE& background)
@@ -1489,13 +1511,6 @@ void ATRDrawWhiteboardToggle()
 		}
 	}
 
-	// 白板切换后强制一次「选择 -> 画笔」模式往返，确保画布立即重绘（白底/恢复生效）
-	ChangeStateModeToSelection();
-	for (int i = 0; i < 60 && stateMode.StateModeSelectEcho != StateModeSelectEnum::ATDrawSelection; i++)
-	{
-		this_thread::sleep_for(chrono::milliseconds(10));
-	}
-	ChangeStateModeToPen();
 }
 
 void DrawpadDrawing()
