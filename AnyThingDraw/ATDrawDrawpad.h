@@ -41,7 +41,6 @@ extern IMAGE whiteboardCanvas;
 void ATRDrawWhiteboardToggle();
 void ATRDrawWhiteboardClear();
 void ATRDrawCanvasClear();
-void ATRDrawWhiteboardForceClose();
 extern bool whiteboardCanvasActive;
 extern IMAGE window_background;
 

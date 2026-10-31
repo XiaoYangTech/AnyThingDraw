@@ -338,7 +338,6 @@ void KeyboardInteraction()
 			}
 			else if (m.message == WM_KEYDOWN && m.vkcode == VK_ESCAPE)
 			{
-				if (whiteboard.select) ATRDrawWhiteboardForceClose();
 				auto vkcode = m.vkcode;
 
 				while (ATDrawInputs::IsKeyBoardDown(vkcode)) this_thread::sleep_for(chrono::milliseconds(20));
@@ -1459,12 +1458,6 @@ void ATRDrawCanvasClear()
 {
 	canvasClearRequest = true;
 }
-// 白板强制关闭并刷新（ESC 退出等场景，保证白幕立即消失）
-void ATRDrawWhiteboardForceClose()
-{
-	whiteboard.select = false;
-	whiteboardClearRequest = true;
-}
 // 白板：切换独立画布（白板与普通/PPT 画布不共用同一 HBITMAP，彻底隔离批注）
 static void WhiteboardApplyPending()
 {
@@ -1474,7 +1467,7 @@ static void WhiteboardApplyPending()
 		canvasClearRequest = false;
 		SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
 		WhiteboardResetHistory();
-		if (PptInfoState.TotalPage != -1)
+		if (!whiteboard.select && PptInfoState.TotalPage != -1)
 		{
 			PptImg.IsSaved[PptInfoState.CurrentPage] = false;
 			PptImg.Image.erase(PptInfoState.CurrentPage);
@@ -1520,6 +1513,8 @@ static void WhiteboardApplyPending()
 			drawpad = whiteboardCanvas;
 			whiteboardCanvas = tmp;
 			whiteboardSwapped = false;
+			// 白板是临时画布：退出即销毁内容
+			SetImageColor(whiteboardCanvas, RGBA(0, 0, 0, 0), true);
 		}
 		WhiteboardResetHistory();
 		whiteboardCanvasActive = false;
@@ -1636,11 +1631,9 @@ void DrawpadDrawing()
 			if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
 			{
 			ChooseEnd:
-				// 进入选择态自动关闭白板，避免白幕滞留并拦截桌面点击
-				if (whiteboard.select) whiteboard.select = false;
 				{
-					if (whiteboard.select) SetImageColor(window_background, RGB(255, 255, 255), false);
-					else SetImageColor(window_background, RGBA(0, 0, 0, 0), true);
+					// 选择态：不显示白幕（白板画布保留，方便点桌面/关闭弹窗），切回批注恢复白板
+					SetImageColor(window_background, RGBA(0, 0, 0, 0), true);
 
 					ulwi.hdcSrc = GetImageHDC(&window_background);
 					UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
@@ -1770,7 +1763,7 @@ void DrawpadDrawing()
 					{
 						drawpad = PptImg.Image[PptInfoStateBuffer.CurrentPage];
 					}
-					else if (!reserve_drawpad) SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
+					else if (!reserve_drawpad && !whiteboard.select) SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
 					reserve_drawpad = false;
 
 					ApplyCanvasBackground(window_background);
