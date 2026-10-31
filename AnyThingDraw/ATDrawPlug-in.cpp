@@ -1963,8 +1963,8 @@ void PptUI()
 					if (pptUiLineWidget[i].X1.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiLineWidget[i].X1.replace = false;
+						if (pptUiLineWidget[i].X1.v != pptUiLineWidgetTarget[i].X1.v) tPptUiChangeSignal = true;
 						pptUiLineWidget[i].X1.v = pptUiLineWidgetTarget[i].X1.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiLineWidget[i].X1.v != pptUiLineWidgetTarget[i].X1.v)
 					{
@@ -1975,8 +1975,8 @@ void PptUI()
 					if (pptUiLineWidget[i].Y1.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiLineWidget[i].Y1.replace = false;
+						if (pptUiLineWidget[i].Y1.v != pptUiLineWidgetTarget[i].Y1.v) tPptUiChangeSignal = true;
 						pptUiLineWidget[i].Y1.v = pptUiLineWidgetTarget[i].Y1.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiLineWidget[i].Y1.v != pptUiLineWidgetTarget[i].Y1.v)
 					{
@@ -1987,8 +1987,8 @@ void PptUI()
 					if (pptUiLineWidget[i].X2.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiLineWidget[i].X2.replace = false;
+						if (pptUiLineWidget[i].X2.v != pptUiLineWidgetTarget[i].X2.v) tPptUiChangeSignal = true;
 						pptUiLineWidget[i].X2.v = pptUiLineWidgetTarget[i].X2.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiLineWidget[i].X2.v != pptUiLineWidgetTarget[i].X2.v)
 					{
@@ -1999,8 +1999,8 @@ void PptUI()
 					if (pptUiLineWidget[i].Y2.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiLineWidget[i].Y2.replace = false;
+						if (pptUiLineWidget[i].Y2.v != pptUiLineWidgetTarget[i].Y2.v) tPptUiChangeSignal = true;
 						pptUiLineWidget[i].Y2.v = pptUiLineWidgetTarget[i].Y2.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiLineWidget[i].Y2.v != pptUiLineWidgetTarget[i].Y2.v)
 					{
@@ -2013,8 +2013,8 @@ void PptUI()
 					if (pptUiLineWidget[i].Thickness.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiLineWidget[i].Thickness.replace = false;
+						if (pptUiLineWidget[i].Thickness.v != pptUiLineWidgetTarget[i].Thickness.v) tPptUiChangeSignal = true;
 						pptUiLineWidget[i].Thickness.v = pptUiLineWidgetTarget[i].Thickness.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiLineWidget[i].Thickness.v != pptUiLineWidgetTarget[i].Thickness.v)
 					{
@@ -2025,8 +2025,8 @@ void PptUI()
 					if (pptUiLineWidget[i].Color.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiLineWidget[i].Color.replace = false;
+						if (pptUiLineWidget[i].Color.v != pptUiLineWidgetTarget[i].Color.v) tPptUiChangeSignal = true;
 						pptUiLineWidget[i].Color.v = pptUiLineWidgetTarget[i].Color.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiLineWidget[i].Color.v != pptUiLineWidgetTarget[i].Color.v)
 					{
@@ -2040,8 +2040,8 @@ void PptUI()
 					if (pptUiRoundRectWidget[i].X.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].X.replace = false;
+						if (pptUiRoundRectWidget[i].X.v != pptUiRoundRectWidgetTarget[i].X.v) tPptUiChangeSignal = true;
 						pptUiRoundRectWidget[i].X.v = pptUiRoundRectWidgetTarget[i].X.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiRoundRectWidget[i].X.v != pptUiRoundRectWidgetTarget[i].X.v)
 					{
@@ -2052,8 +2052,8 @@ void PptUI()
 					if (pptUiRoundRectWidget[i].Y.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].Y.replace = false;
+						if (pptUiRoundRectWidget[i].Y.v != pptUiRoundRectWidgetTarget[i].Y.v) tPptUiChangeSignal = true;
 						pptUiRoundRectWidget[i].Y.v = pptUiRoundRectWidgetTarget[i].Y.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiRoundRectWidget[i].Y.v != pptUiRoundRectWidgetTarget[i].Y.v)
 					{
@@ -2064,8 +2064,8 @@ void PptUI()
 					if (pptUiRoundRectWidget[i].Width.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].Width.replace = false;
+						if (pptUiRoundRectWidget[i].Width.v != pptUiRoundRectWidgetTarget[i].Width.v) tPptUiChangeSignal = true;
 						pptUiRoundRectWidget[i].Width.v = pptUiRoundRectWidgetTarget[i].Width.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiRoundRectWidget[i].Width.v != pptUiRoundRectWidgetTarget[i].Width.v)
 					{
@@ -2076,8 +2076,8 @@ void PptUI()
 					if (pptUiRoundRectWidget[i].Height.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].Height.replace = false;
+						if (pptUiRoundRectWidget[i].Height.v != pptUiRoundRectWidgetTarget[i].Height.v) tPptUiChangeSignal = true;
 						pptUiRoundRectWidget[i].Height.v = pptUiRoundRectWidgetTarget[i].Height.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiRoundRectWidget[i].Height.v != pptUiRoundRectWidgetTarget[i].Height.v)
 					{
@@ -2088,8 +2088,8 @@ void PptUI()
 					if (pptUiRoundRectWidget[i].EllipseWidth.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].EllipseWidth.replace = false;
+						if (pptUiRoundRectWidget[i].EllipseWidth.v != pptUiRoundRectWidgetTarget[i].EllipseWidth.v) tPptUiChangeSignal = true;
 						pptUiRoundRectWidget[i].EllipseWidth.v = pptUiRoundRectWidgetTarget[i].EllipseWidth.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiRoundRectWidget[i].EllipseWidth.v != pptUiRoundRectWidgetTarget[i].EllipseWidth.v)
 					{
@@ -2100,8 +2100,8 @@ void PptUI()
 					if (pptUiRoundRectWidget[i].EllipseHeight.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].EllipseHeight.replace = false;
+						if (pptUiRoundRectWidget[i].EllipseHeight.v != pptUiRoundRectWidgetTarget[i].EllipseHeight.v) tPptUiChangeSignal = true;
 						pptUiRoundRectWidget[i].EllipseHeight.v = pptUiRoundRectWidgetTarget[i].EllipseHeight.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiRoundRectWidget[i].EllipseHeight.v != pptUiRoundRectWidgetTarget[i].EllipseHeight.v)
 					{
@@ -2114,8 +2114,8 @@ void PptUI()
 					if (pptUiRoundRectWidget[i].FrameThickness.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].FrameThickness.replace = false;
+						if (pptUiRoundRectWidget[i].FrameThickness.v != pptUiRoundRectWidgetTarget[i].FrameThickness.v) tPptUiChangeSignal = true;
 						pptUiRoundRectWidget[i].FrameThickness.v = pptUiRoundRectWidgetTarget[i].FrameThickness.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiRoundRectWidget[i].FrameThickness.v != pptUiRoundRectWidgetTarget[i].FrameThickness.v)
 					{
@@ -2126,8 +2126,8 @@ void PptUI()
 					if (pptUiRoundRectWidget[i].FrameColor.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].FrameColor.replace = false;
+						if (pptUiRoundRectWidget[i].FrameColor.v != pptUiRoundRectWidgetTarget[i].FrameColor.v) tPptUiChangeSignal = true;
 						pptUiRoundRectWidget[i].FrameColor.v = pptUiRoundRectWidgetTarget[i].FrameColor.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiRoundRectWidget[i].FrameColor.v != pptUiRoundRectWidgetTarget[i].FrameColor.v)
 					{
@@ -2138,8 +2138,8 @@ void PptUI()
 					if (pptUiRoundRectWidget[i].FillColor.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].FillColor.replace = false;
+						if (pptUiRoundRectWidget[i].FillColor.v != pptUiRoundRectWidgetTarget[i].FillColor.v) tPptUiChangeSignal = true;
 						pptUiRoundRectWidget[i].FillColor.v = pptUiRoundRectWidgetTarget[i].FillColor.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiRoundRectWidget[i].FillColor.v != pptUiRoundRectWidgetTarget[i].FillColor.v)
 					{
@@ -2153,8 +2153,8 @@ void PptUI()
 					if (pptUiImageWidget[i].X.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiImageWidget[i].X.replace = false;
+						if (pptUiImageWidget[i].X.v != pptUiImageWidgetTarget[i].X.v) tPptUiChangeSignal = true;
 						pptUiImageWidget[i].X.v = pptUiImageWidgetTarget[i].X.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiImageWidget[i].X.v != pptUiImageWidgetTarget[i].X.v)
 					{
@@ -2165,8 +2165,8 @@ void PptUI()
 					if (pptUiImageWidget[i].Y.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiImageWidget[i].Y.replace = false;
+						if (pptUiImageWidget[i].Y.v != pptUiImageWidgetTarget[i].Y.v) tPptUiChangeSignal = true;
 						pptUiImageWidget[i].Y.v = pptUiImageWidgetTarget[i].Y.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiImageWidget[i].Y.v != pptUiImageWidgetTarget[i].Y.v)
 					{
@@ -2177,8 +2177,8 @@ void PptUI()
 					if (pptUiImageWidget[i].Width.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiImageWidget[i].Width.replace = false;
+						if (pptUiImageWidget[i].Width.v != pptUiImageWidgetTarget[i].Width.v) tPptUiChangeSignal = true;
 						pptUiImageWidget[i].Width.v = pptUiImageWidgetTarget[i].Width.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiImageWidget[i].Width.v != pptUiImageWidgetTarget[i].Width.v)
 					{
@@ -2189,8 +2189,8 @@ void PptUI()
 					if (pptUiImageWidget[i].Height.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiImageWidget[i].Height.replace = false;
+						if (pptUiImageWidget[i].Height.v != pptUiImageWidgetTarget[i].Height.v) tPptUiChangeSignal = true;
 						pptUiImageWidget[i].Height.v = pptUiImageWidgetTarget[i].Height.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiImageWidget[i].Height.v != pptUiImageWidgetTarget[i].Height.v)
 					{
@@ -2201,8 +2201,8 @@ void PptUI()
 					if (pptUiImageWidget[i].Transparency.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiImageWidget[i].Transparency.replace = false;
+						if (pptUiImageWidget[i].Transparency.v != pptUiImageWidgetTarget[i].Transparency.v) tPptUiChangeSignal = true;
 						pptUiImageWidget[i].Transparency.v = pptUiImageWidgetTarget[i].Transparency.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiImageWidget[i].Transparency.v != pptUiImageWidgetTarget[i].Transparency.v)
 					{
@@ -2224,8 +2224,8 @@ void PptUI()
 					if (pptUiWordsWidget[i].Left.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiWordsWidget[i].Left.replace = false;
+						if (pptUiWordsWidget[i].Left.v != pptUiWordsWidgetTarget[i].Left.v) tPptUiChangeSignal = true;
 						pptUiWordsWidget[i].Left.v = pptUiWordsWidgetTarget[i].Left.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiWordsWidget[i].Left.v != pptUiWordsWidgetTarget[i].Left.v)
 					{
@@ -2236,8 +2236,8 @@ void PptUI()
 					if (pptUiWordsWidget[i].Top.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiWordsWidget[i].Top.replace = false;
+						if (pptUiWordsWidget[i].Top.v != pptUiWordsWidgetTarget[i].Top.v) tPptUiChangeSignal = true;
 						pptUiWordsWidget[i].Top.v = pptUiWordsWidgetTarget[i].Top.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiWordsWidget[i].Top.v != pptUiWordsWidgetTarget[i].Top.v)
 					{
@@ -2248,8 +2248,8 @@ void PptUI()
 					if (pptUiWordsWidget[i].Right.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiWordsWidget[i].Right.replace = false;
+						if (pptUiWordsWidget[i].Right.v != pptUiWordsWidgetTarget[i].Right.v) tPptUiChangeSignal = true;
 						pptUiWordsWidget[i].Right.v = pptUiWordsWidgetTarget[i].Right.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiWordsWidget[i].Right.v != pptUiWordsWidgetTarget[i].Right.v)
 					{
@@ -2260,8 +2260,8 @@ void PptUI()
 					if (pptUiWordsWidget[i].Bottom.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiWordsWidget[i].Bottom.replace = false;
+						if (pptUiWordsWidget[i].Bottom.v != pptUiWordsWidgetTarget[i].Bottom.v) tPptUiChangeSignal = true;
 						pptUiWordsWidget[i].Bottom.v = pptUiWordsWidgetTarget[i].Bottom.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiWordsWidget[i].Bottom.v != pptUiWordsWidgetTarget[i].Bottom.v)
 					{
@@ -2274,8 +2274,8 @@ void PptUI()
 					if (pptUiWordsWidget[i].WordsHeight.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiWordsWidget[i].WordsHeight.replace = false;
+						if (pptUiWordsWidget[i].WordsHeight.v != pptUiWordsWidgetTarget[i].WordsHeight.v) tPptUiChangeSignal = true;
 						pptUiWordsWidget[i].WordsHeight.v = pptUiWordsWidgetTarget[i].WordsHeight.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiWordsWidget[i].WordsHeight.v != pptUiWordsWidgetTarget[i].WordsHeight.v)
 					{
@@ -2286,8 +2286,8 @@ void PptUI()
 					if (pptUiWordsWidget[i].WordsColor.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
 					{
 						pptUiWordsWidget[i].WordsColor.replace = false;
+						if (pptUiWordsWidget[i].WordsColor.v != pptUiWordsWidgetTarget[i].WordsColor.v) tPptUiChangeSignal = true;
 						pptUiWordsWidget[i].WordsColor.v = pptUiWordsWidgetTarget[i].WordsColor.v;
-						tPptUiChangeSignal = true;
 					}
 					else if (pptUiWordsWidget[i].WordsColor.v != pptUiWordsWidgetTarget[i].WordsColor.v)
 					{

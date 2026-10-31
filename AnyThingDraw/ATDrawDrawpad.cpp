@@ -39,6 +39,7 @@ IMAGE drawpad; //主画板
 IMAGE window_background;
 IMAGE whiteboardCanvas;	// 白板专用独立画布
 bool whiteboardSwapped = false;	// 当前 drawpad 是否已切换为白板画布
+bool whiteboardClearRequest = false;	// 白板清空请求（鼠标线程置位，绘制线程执行）
 extern ATDrawAtomic<int> PptUiAllReplaceSignal;
 
 HHOOK DrawpadHookCall;
@@ -1419,9 +1420,53 @@ static void WhiteboardResetHistory()
 	reference_record_pointer = 0;
 	extreme_point.clear();
 }
+// 白板：重合成画布底色并立即刷新分层窗口
+static void WhiteboardRefreshLayered()
+{
+	ApplyCanvasBackground(window_background);
+	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+	BLENDFUNCTION wbBlend;
+	wbBlend.BlendOp = AC_SRC_OVER;
+	wbBlend.BlendFlags = 0;
+	wbBlend.SourceConstantAlpha = 255;
+	wbBlend.AlphaFormat = AC_SRC_ALPHA;
+	HDC wbScreen = GetDC(NULL);
+	POINT wbSrc = { 0, 0 }, wbDst = { 0, 0 };
+	SIZE wbSize = { window_background.getwidth(), window_background.getheight() };
+	UPDATELAYEREDWINDOWINFO wbUlwi = { 0 };
+	wbUlwi.cbSize = sizeof(wbUlwi);
+	wbUlwi.hdcDst = wbScreen;
+	wbUlwi.pptDst = &wbDst;
+	wbUlwi.psize = &wbSize;
+	wbUlwi.pptSrc = &wbSrc;
+	wbUlwi.crKey = 0;
+	wbUlwi.pblend = &wbBlend;
+	wbUlwi.dwFlags = ULW_ALPHA;
+	wbUlwi.hdcSrc = GetImageHDC(&window_background);
+	UpdateLayeredWindowIndirect(drawpad_window, &wbUlwi);
+	if (wbScreen) ReleaseDC(NULL, wbScreen);
+}
+// 白板：独立清空链路（不经过选择态，也不影响普通/PPT 画布与撤销栈）
+void ATRDrawWhiteboardClear()
+{
+	whiteboardClearRequest = true;
+}
 // 白板：切换独立画布（白板与普通/PPT 画布不共用同一 HBITMAP，彻底隔离批注）
 static void WhiteboardApplyPending()
 {
+	// 清空请求优先处理（白板内"选择并清空"/长按橡皮走这里，不退出白板）
+	if (whiteboardClearRequest)
+	{
+		whiteboardClearRequest = false;
+		if (whiteboard.select)
+		{
+			if (ATDrawLogger) ATDrawLogger->info("[白板] 清空（独立链路，不退出白板）");
+			SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
+			WhiteboardResetHistory();
+			WhiteboardRefreshLayered();
+		}
+	}
+
 	static bool wbApplied = false;
 	if (whiteboard.select == wbApplied) return;
 	wbApplied = whiteboard.select;
@@ -1451,31 +1496,7 @@ static void WhiteboardApplyPending()
 		reserve_drawpad = true;
 	}
 
-	// 立即重合成画布底色并刷新分层窗口
-	ApplyCanvasBackground(window_background);
-	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
-	{
-		BLENDFUNCTION wbBlend;
-		wbBlend.BlendOp = AC_SRC_OVER;
-		wbBlend.BlendFlags = 0;
-		wbBlend.SourceConstantAlpha = 255;
-		wbBlend.AlphaFormat = AC_SRC_ALPHA;
-		HDC wbScreen = GetDC(NULL);
-		POINT wbSrc = { 0, 0 }, wbDst = { 0, 0 };
-		SIZE wbSize = { window_background.getwidth(), window_background.getheight() };
-		UPDATELAYEREDWINDOWINFO wbUlwi = { 0 };
-		wbUlwi.cbSize = sizeof(wbUlwi);
-		wbUlwi.hdcDst = wbScreen;
-		wbUlwi.pptDst = &wbDst;
-		wbUlwi.psize = &wbSize;
-		wbUlwi.pptSrc = &wbSrc;
-		wbUlwi.crKey = 0;
-		wbUlwi.pblend = &wbBlend;
-		wbUlwi.dwFlags = ULW_ALPHA;
-		wbUlwi.hdcSrc = GetImageHDC(&window_background);
-		UpdateLayeredWindowIndirect(drawpad_window, &wbUlwi);
-		if (wbScreen) ReleaseDC(NULL, wbScreen);
-	}
+	WhiteboardRefreshLayered();
 }
 // 白板：每帧合成时的画布底色
 static void ApplyCanvasBackground(IMAGE& background)
