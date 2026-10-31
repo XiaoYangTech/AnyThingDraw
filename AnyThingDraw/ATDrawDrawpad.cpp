@@ -1405,6 +1405,7 @@ void MultiFingerDrawing(LONG pid, TouchMode initialMode, StateModeClass stateInf
 	lockPointPosSm.unlock();
 }
 static void WhiteboardResetAnnotations();
+static void ApplyCanvasBackground(IMAGE& background);
 
 // 白板：在绘制/选择/外层循环中都及时应用开关变化
 static void WhiteboardApplyPending()
@@ -1431,6 +1432,9 @@ static void WhiteboardApplyPending()
 		}
 		reserve_drawpad = true;
 	}
+	// 立即重合成画布底色，避免绘制循环里沿用旧的白底（否则关闭后白幕残留到切换模式）
+	ApplyCanvasBackground(window_background);
+	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 }
 // 白板：每帧合成时的画布底色
 static void ApplyCanvasBackground(IMAGE& background)
@@ -2105,6 +2109,8 @@ void DrawpadDrawing()
 			siz = StrokeImageList.size();
 			lock3.unlock();
 		}
+
+		WhiteboardApplyPending();
 
 		ulwi.hdcSrc = GetImageHDC(&window_background);
 		UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
