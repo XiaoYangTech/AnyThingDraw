@@ -22,6 +22,8 @@ Json::Value record_value;
 // 撤销操作
 void ATDrawRecall()
 {
+	// 白板切换尚未真正生效时，撤销栈还是普通/PPT 画布的历史，直接忽略，避免撤回串到 PPT 批注
+	if (whiteboard.select && !whiteboardCanvasActive) return;
 	// 标识绘制等待
 	{
 		unique_lock<shared_mutex> LockdrawWaitingSm(drawWaitingSm);

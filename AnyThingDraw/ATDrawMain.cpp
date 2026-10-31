@@ -825,10 +825,16 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 		//PptCOM 组件加载
 		{
 			// 安装包已放置 PptCOM.dll 时直接使用；便携版（缺失时）才从资源释放
-			if (_waccess((globalPath + L"PptCOM.dll").c_str(), 0) != 0)
+			wstring pptComPath = globalPath + L"PptCOM.dll";
+			if (_waccess(pptComPath.c_str(), 0) != 0)
 			{
-				if (!ExtractResource((globalPath + L"PptCOM.dll").c_str(), L"DLL", MAKEINTRESOURCE(222)))
-					ATDrawLogger->warn("[主线程][ATDrawMain] 解压PptCOM.dll失败（安装目录疑似只读，请使用安装包安装）");
+				// 安装目录只读（Program Files）时回退到用户数据目录释放
+				pptComPath = userDataPath + L"PptCOM.dll";
+				if (_waccess(pptComPath.c_str(), 0) != 0)
+				{
+					if (!ExtractResource(pptComPath.c_str(), L"DLL", MAKEINTRESOURCE(222)))
+						ATDrawLogger->warn("[主线程][ATDrawMain] 解压PptCOM.dll失败（安装目录与用户目录均不可写）");
+				}
 			}
 
 			ACTCTX actCtx = { 0 };
@@ -840,7 +846,7 @@ int WINAPI wWinMain(HINSTANCE /*hInstance*/, HINSTANCE /*hPrevInstance*/, LPWSTR
 			hActCtx = CreateActCtx(&actCtx);
 			ActivateActCtx(hActCtx, &ulCookie);
 
-			HMODULE hModule = LoadLibraryW((globalPath + L"PptCOM.dll").c_str());
+			HMODULE hModule = LoadLibraryW(pptComPath.c_str());
 		}
 
 		ATDrawLogger->info("[主线程][ATDrawMain] COM初始化完成");

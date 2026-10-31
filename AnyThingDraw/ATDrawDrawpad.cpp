@@ -40,6 +40,8 @@ IMAGE window_background;
 IMAGE whiteboardCanvas;	// 白板专用独立画布
 bool whiteboardSwapped = false;	// 当前 drawpad 是否已切换为白板画布
 bool whiteboardClearRequest = false;	// 白板清空请求（鼠标线程置位，绘制线程执行）
+bool canvasClearRequest = false;	// 画布清空请求（橡皮清空链路专用，不切换模式）
+bool whiteboardCanvasActive = false;	// 白板画布是否已实际切换到 drawpad
 extern ATDrawAtomic<int> PptUiAllReplaceSignal;
 
 HHOOK DrawpadHookCall;
@@ -336,6 +338,7 @@ void KeyboardInteraction()
 			}
 			else if (m.message == WM_KEYDOWN && m.vkcode == VK_ESCAPE)
 			{
+				if (whiteboard.select) ATRDrawWhiteboardForceClose();
 				auto vkcode = m.vkcode;
 
 				while (ATDrawInputs::IsKeyBoardDown(vkcode)) this_thread::sleep_for(chrono::milliseconds(20));
@@ -1451,10 +1454,35 @@ void ATRDrawWhiteboardClear()
 {
 	whiteboardClearRequest = true;
 }
+// 画布清空（橡皮清空链路专用，不切换选择态）
+void ATRDrawCanvasClear()
+{
+	canvasClearRequest = true;
+}
+// 白板强制关闭并刷新（ESC 退出等场景，保证白幕立即消失）
+void ATRDrawWhiteboardForceClose()
+{
+	whiteboard.select = false;
+	whiteboardClearRequest = true;
+}
 // 白板：切换独立画布（白板与普通/PPT 画布不共用同一 HBITMAP，彻底隔离批注）
 static void WhiteboardApplyPending()
 {
-	// 清空请求优先处理（白板内"选择并清空"/长按橡皮走这里，不退出白板）
+	// 画布清空请求：橡皮清空链路专用，直接清空当前画布，不经过选择态
+	if (canvasClearRequest)
+	{
+		canvasClearRequest = false;
+		SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
+		WhiteboardResetHistory();
+		if (PptInfoState.TotalPage != -1)
+		{
+			PptImg.IsSaved[PptInfoState.CurrentPage] = false;
+			PptImg.Image.erase(PptInfoState.CurrentPage);
+			PptImg.IsSave = true;
+		}
+		WhiteboardRefreshLayered();
+	}
+	// 白板清空 / 强制刷新请求
 	if (whiteboardClearRequest)
 	{
 		whiteboardClearRequest = false;
@@ -1463,8 +1491,8 @@ static void WhiteboardApplyPending()
 			if (ATDrawLogger) ATDrawLogger->info("[白板] 清空（独立链路，不退出白板）");
 			SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
 			WhiteboardResetHistory();
-			WhiteboardRefreshLayered();
 		}
+		WhiteboardRefreshLayered();
 	}
 
 	static bool wbApplied = false;
@@ -1482,6 +1510,7 @@ static void WhiteboardApplyPending()
 		whiteboardSwapped = true;
 		SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
 		WhiteboardResetHistory();
+		whiteboardCanvasActive = true;
 	}
 	else
 	{
@@ -1493,6 +1522,7 @@ static void WhiteboardApplyPending()
 			whiteboardSwapped = false;
 		}
 		WhiteboardResetHistory();
+		whiteboardCanvasActive = false;
 		reserve_drawpad = true;
 	}
 

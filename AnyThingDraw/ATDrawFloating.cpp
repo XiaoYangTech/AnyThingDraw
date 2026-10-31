@@ -4822,16 +4822,8 @@ void MouseInteraction()
 		// 右键橡皮：清空画布并切回批注模式（模式无关，任何状态下生效）
 		if (m.message == WM_RBUTTONDOWN && setlist.eraserQuickClean && IsInRect(m.x, m.y, { 192 + 8, floating_windows.height - 156 + 8, 192 + 8 + 80, floating_windows.height - 156 + 8 + 80 }))
 		{
-			if (whiteboard.select)
-			{
-				ATRDrawWhiteboardClear();
-			}
-			else
-			{
-				ChangeStateModeToSelection();
-				for (int i = 0; i < 20 && stateMode.StateModeSelectEcho != StateModeSelectEnum::ATDrawSelection; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-				ChangeStateModeToPen();
-			}
+			ATRDrawCanvasClear();
+			if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawPen) ChangeStateModeToPen();
 
 			hiex::flushmessage_win32(EM_MOUSE, floating_window);
 		}
@@ -5032,8 +5024,7 @@ void MouseInteraction()
 								if (!m.lbutton)
 								{
 									state = 1;
-									if (whiteboard.select) ATRDrawWhiteboardClear();
-									else if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection) ChangeStateModeToSelection();
+									if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection) ChangeStateModeToSelection();
 
 									break;
 								}
@@ -5687,18 +5678,8 @@ void MouseInteraction()
 									{
 										// 橡皮模式下再点橡皮：清空画布并切回批注模式
 										// 过渡期间 UI 保持橡皮显示，避免闪现“选择”状态
-										if (whiteboard.select)
-										{
-											ATRDrawWhiteboardClear();
-										}
-										else
-										{
-											eraserClearInProgress = true;
-											ChangeStateModeToSelection();
-											for (int i = 0; i < 20 && stateMode.StateModeSelectEcho != StateModeSelectEnum::ATDrawSelection; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-											ChangeStateModeToPen();
-											eraserClearInProgress = false;
-										}
+										ATRDrawCanvasClear();
+										if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawPen) ChangeStateModeToPen();
 									}
 									else if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawEraser) ChangeStateModeToEraser();
 
@@ -5712,18 +5693,8 @@ void MouseInteraction()
 						if (eraserLongPress)
 						{
 							// 长按橡皮（触摸屏长按等效）：清空画布并切回批注模式
-							if (whiteboard.select)
-							{
-								ATRDrawWhiteboardClear();
-							}
-							else
-							{
-								eraserClearInProgress = true;
-								ChangeStateModeToSelection();
-								for (int i = 0; i < 20 && stateMode.StateModeSelectEcho != StateModeSelectEnum::ATDrawSelection; i++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
-								ChangeStateModeToPen();
-								eraserClearInProgress = false;
-							}
+							ATRDrawCanvasClear();
+							if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawPen) ChangeStateModeToPen();
 						}
 					}
 				}

@@ -205,6 +205,7 @@ Section "Uninstall"
     RMDir /r "$INSTDIR\log"
     RMDir /r "$INSTDIR\AnyThingDraw"
     RMDir /r "$INSTDIR\installer"
+    RMDir /r "$LOCALAPPDATA\AnyThingDraw"
 keep_data:
 
   Delete "$INSTDIR\Uninstall.exe"
