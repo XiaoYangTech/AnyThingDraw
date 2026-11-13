@@ -19,18 +19,16 @@ Json::Value record_value;
 
 // 载入记录
 // 保存图像到指定目录
-// 撤销操作
+// 撤回操作
 void ATDrawRecall()
 {
-	// 白板切换尚未生效时忽略撤销，避免跨画布串历史（生效后白板有独立撤销栈）
-	if (whiteboard.select != whiteboardCanvasActive) return;
 	// 标识绘制等待
 	{
 		unique_lock<shared_mutex> LockdrawWaitingSm(drawWaitingSm);
 		drawWaiting = true;
 		LockdrawWaitingSm.unlock();
 	}
-	// 防止绘图时撤销冲突
+	// 防止绘图时撤回冲突
 	{
 		std::shared_lock<std::shared_mutex> LockStrokeImageListSm(StrokeImageListSm);
 		bool start = !StrokeImageList.empty();
@@ -75,8 +73,7 @@ void ATDrawRecall()
 		recall_image_recond = 0;
 		FirstDraw = true;
 	}
-	if (whiteboard.select) SetImageColor(window_background, RGB(255, 255, 255), false);
-	else SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+	SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
 	hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 	if (stateMode.StateModeSelect != StateModeSelectEnum::ATDrawSelection)

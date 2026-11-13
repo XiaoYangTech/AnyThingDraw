@@ -37,13 +37,8 @@ extern bool drawWaiting;
 extern shared_mutex drawWaitingSm;
 
 extern IMAGE drawpad;
-extern IMAGE whiteboardCanvas;
-void ATRDrawWhiteboardToggle();
-void ATRDrawWhiteboardClear();
-void ATRDrawCanvasClear();
-void ATRDrawWhiteboardDestroy();
-extern bool whiteboardCanvasActive;
 extern IMAGE window_background;
+void ATRDrawCanvasClear();
 
 extern HHOOK DrawpadHookCall;
 LRESULT CALLBACK DrawpadHookCallback(int nCode, WPARAM wParam, LPARAM lParam);

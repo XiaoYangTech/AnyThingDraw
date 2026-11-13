@@ -509,7 +509,6 @@ void DrawScreen()
 			atdrawLoadImage(&floating_icon[17], L"PNG", L"icon17", 20, 20, true);
 			atdrawLoadImage(&floating_icon[20], L"PNG", L"icon20", 20, 20, true);
 			atdrawLoadImage(&floating_icon[30], L"PNG", L"icon21", 30, 30, true);	// 鼠标点击（窗口穿透）
-			atdrawLoadImage(&floating_icon[31], L"PNG", L"icon22", 30, 30, true);	// 白板
 
 
 			atdrawLoadImage(&floating_icon[23], L"PNG", L"CustomizeIco3", 40, 40, true); // desktop

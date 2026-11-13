@@ -1101,8 +1101,8 @@ void PptUI()
 	PPTMainMonitor = MainMonitor;
 	DisplaysInfoLock.unlock();
 
-	// 关闭 UI 动画：工具栏直接出现/消失（避免"缓缓上升"和延迟感）
-	PptUiAnimationEnable = false;
+	// 启用 UI 动画（恢复原有出场动画）
+	PptUiAnimationEnable = true;
 
 	// UI 初始化
 	{
@@ -2437,9 +2437,6 @@ void PptInfo()
 			pptUiWidgetState = PptUiWidgetStateEnum::Close;
 			PptUiAllReplaceSignal = -1;
 
-			// 放映结束：白板是临时画布，一并销毁，避免白幕残留在屏幕上
-			if (whiteboard.select) ATRDrawWhiteboardDestroy();
-
 			PptImg.IsSave = false;
 			PptImg.IsSaved.clear();
 			PptImg.Image.clear();
@@ -2796,6 +2793,11 @@ void PptDraw()
 			PptUiChangeSignal = false;
 			SetImageColor(PptWindowBackground, RGBA(0, 0, 0, 0), true);
 
+			// 放映已结束（工具栏处于 Close）时不再绘制控件，避免退出瞬间残影/闪到任务栏下方
+			bool pptToolbarShouldDraw = !(PptInfoState.TotalPage == -1 && pptUiWidgetState == PptUiWidgetStateEnum::Close);
+
+			if (pptToolbarShouldDraw)
+			{
 			DCRenderTarget->BeginDraw();
 
 			// 底部左侧控件
@@ -3617,6 +3619,7 @@ void PptDraw()
 			}
 
 			DCRenderTarget->EndDraw();
+			}
 
 			{
 				UpdateLayeredWindowIndirect(ppt_window, &ulwi);

@@ -37,13 +37,7 @@ shared_mutex drawWaitingSm;
 
 IMAGE drawpad; //主画板
 IMAGE window_background;
-IMAGE whiteboardCanvas;	// 白板专用独立画布
-bool whiteboardSwapped = false;	// 当前 drawpad 是否已切换为白板画布
-bool whiteboardClearRequest = false;	// 白板清空请求（鼠标线程置位，绘制线程执行）
-bool canvasClearRequest = false;	// 画布清空请求（橡皮清空链路专用，不切换模式）
-bool whiteboardCanvasActive = false;	// 白板画布是否已实际切换到 drawpad
-bool whiteboardDiscardAfterClose = false;	// 关闭白板后丢弃原画布（PPT 已结束时用）
-extern ATDrawAtomic<int> PptUiAllReplaceSignal;
+bool canvasClearRequest = false;	// 画布清空请求（橡皮清空链路专用）
 
 HHOOK DrawpadHookCall;
 bool IsHotkeyDown;
@@ -67,16 +61,6 @@ LRESULT CALLBACK DrawpadHookCallback(int nCode, WPARAM wParam, LPARAM lParam)
 
 		// 全局状态变量
 		bool checkEndShowIsChecking = CheckEndShow.isChecking;
-
-		// 放映中 ESC 不允许透传给 PowerPoint（否则 PPT 会绕过确认框自行退出放映）
-		// 确认框（#32770）获得焦点时放行，保证对话框能收到 ESC
-		if (PptInfoState.TotalPage != -1 && pKeyInfo->vkCode == VK_ESCAPE)
-		{
-			wchar_t fgClass[32] = { 0 };
-			HWND fgWindow = GetForegroundWindow();
-			if (fgWindow) GetClassNameW(fgWindow, fgClass, 32);
-			if (wcscmp(fgClass, L"#32770") != 0) return 1;
-		}
 
 		// PPT模式：按键反馈
 		if (PptInfoState.TotalPage != -1 && !checkEndShowIsChecking)
@@ -357,17 +341,11 @@ void KeyboardInteraction()
 				{
 					if (CheckEndShow.Check())
 					{
-						// 已确认结束放映：白板按临时画布销毁
-						if (PptInfoState.TotalPage != -1 && whiteboard.select) ATRDrawWhiteboardDestroy();
 						ChangeStateModeToSelection();
 						EndPptShow();
 					}
 				}
-				else
-				{
-					if (PptInfoState.TotalPage != -1 && whiteboard.select) ATRDrawWhiteboardDestroy();
-					EndPptShow();
-				}
+				else EndPptShow();
 			}
 		}
 
@@ -425,7 +403,7 @@ void KeyboardInteraction()
 			}
 		}
 
-		// 撤销 Ctrl + Z
+		// 撤回 Ctrl + Z
 		if (m.vkcode == (BYTE)0x5A && m.prevdown && m.message == WM_KEYDOWN)
 		{
 			while (1)
@@ -1425,239 +1403,10 @@ void MultiFingerDrawing(LONG pid, TouchMode initialMode, StateModeClass stateInf
 	if (TouchPos.find(pid) != TouchPos.end()) TouchPos.erase(pid);
 	lockPointPosSm.unlock();
 }
-static void ApplyCanvasBackground(IMAGE& background);
-
-// 白板：重置撤销栈（不触碰画布内容）
-static void WhiteboardResetHistory()
-{
-	deque<RecallStruct>(RecallImage).swap(RecallImage);
-	RecallImagePeak = 0;
-	FirstDraw = true;
-	recall_image_recond = 0;
-	recall_image_reference = 0;
-	current_record_pointer = 0;
-	reference_record_pointer = 0;
-	extreme_point.clear();
-}
-// 白板：重合成画布底色并立即刷新分层窗口
-static void WhiteboardRefreshLayered()
-{
-	ApplyCanvasBackground(window_background);
-	if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
-	BLENDFUNCTION wbBlend;
-	wbBlend.BlendOp = AC_SRC_OVER;
-	wbBlend.BlendFlags = 0;
-	wbBlend.SourceConstantAlpha = 255;
-	wbBlend.AlphaFormat = AC_SRC_ALPHA;
-	HDC wbScreen = GetDC(NULL);
-	POINT wbSrc = { 0, 0 }, wbDst = { 0, 0 };
-	SIZE wbSize = { window_background.getwidth(), window_background.getheight() };
-	UPDATELAYEREDWINDOWINFO wbUlwi = { 0 };
-	wbUlwi.cbSize = sizeof(wbUlwi);
-	wbUlwi.hdcDst = wbScreen;
-	wbUlwi.pptDst = &wbDst;
-	wbUlwi.psize = &wbSize;
-	wbUlwi.pptSrc = &wbSrc;
-	wbUlwi.crKey = 0;
-	wbUlwi.pblend = &wbBlend;
-	wbUlwi.dwFlags = ULW_ALPHA;
-	wbUlwi.hdcSrc = GetImageHDC(&window_background);
-	UpdateLayeredWindowIndirect(drawpad_window, &wbUlwi);
-	if (wbScreen) ReleaseDC(NULL, wbScreen);
-}
-// 白板：独立清空链路（不经过选择态，也不影响普通/PPT 画布与撤销栈）
-void ATRDrawWhiteboardClear()
-{
-	whiteboardClearRequest = true;
-}
-// 白板销毁：关闭白板并丢弃原画布（PPT 已结束等场景，避免把旧 PPT 批注带回桌面）
-void ATRDrawWhiteboardDestroy()
-{
-	whiteboard.select = false;
-	whiteboardDiscardAfterClose = true;
-}
 // 画布清空（橡皮清空链路专用，不切换选择态）
 void ATRDrawCanvasClear()
 {
 	canvasClearRequest = true;
-}
-// 白板：独立撤销栈（进入白板暂存普通/PPT 历史，白板历史退出即销毁）
-struct RecallContextSnapshot
-{
-	deque<RecallStruct> stack;
-	int peak = 0;
-	int recond = 0;
-	int reference = 0;
-	int currentPtr = 0;
-	int referencePtr = 0;
-	bool firstDraw = true;
-	map<pair<int, int>, bool> extreme;
-	bool valid = false;
-};
-static RecallContextSnapshot normalRecallContext;
-
-static void WhiteboardSaveNormalRecall()
-{
-	normalRecallContext.stack = std::move(RecallImage);
-	normalRecallContext.peak = RecallImagePeak;
-	normalRecallContext.recond = recall_image_recond;
-	normalRecallContext.reference = recall_image_reference;
-	normalRecallContext.currentPtr = current_record_pointer;
-	normalRecallContext.referencePtr = reference_record_pointer;
-	normalRecallContext.firstDraw = FirstDraw;
-	normalRecallContext.extreme = extreme_point;
-	normalRecallContext.valid = true;
-
-	RecallImagePeak = 0;
-	recall_image_recond = 0;
-	recall_image_reference = 0;
-	current_record_pointer = 0;
-	reference_record_pointer = 0;
-	extreme_point.clear();
-	FirstDraw = true;
-}
-
-static void WhiteboardRestoreNormalRecall()
-{
-	// 先销毁白板临时撤销历史
-	deque<RecallStruct>(RecallImage).swap(RecallImage);
-	RecallImagePeak = 0;
-	recall_image_recond = 0;
-	recall_image_reference = 0;
-	current_record_pointer = 0;
-	reference_record_pointer = 0;
-	extreme_point.clear();
-	FirstDraw = true;
-
-	if (normalRecallContext.valid)
-	{
-		RecallImage = std::move(normalRecallContext.stack);
-		RecallImagePeak = normalRecallContext.peak;
-		recall_image_recond = normalRecallContext.recond;
-		recall_image_reference = normalRecallContext.reference;
-		current_record_pointer = normalRecallContext.currentPtr;
-		reference_record_pointer = normalRecallContext.referencePtr;
-		FirstDraw = normalRecallContext.firstDraw;
-		extreme_point = normalRecallContext.extreme;
-		normalRecallContext.stack.clear();
-		normalRecallContext.extreme.clear();
-		normalRecallContext.valid = false;
-	}
-}
-
-// 白板：切换独立画布（白板与普通/PPT 画布不共用同一 HBITMAP，彻底隔离批注）
-static void WhiteboardApplyPending()
-{
-	// 画布清空请求：橡皮清空链路专用，直接清空当前画布，不经过选择态
-	if (canvasClearRequest)
-	{
-		canvasClearRequest = false;
-		SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
-		WhiteboardResetHistory();
-		if (!whiteboard.select && PptInfoState.TotalPage != -1)
-		{
-			PptImg.IsSaved[PptInfoState.CurrentPage] = false;
-			PptImg.Image.erase(PptInfoState.CurrentPage);
-			PptImg.IsSave = true;
-		}
-		WhiteboardRefreshLayered();
-	}
-	// 白板清空 / 强制刷新请求
-	if (whiteboardClearRequest)
-	{
-		whiteboardClearRequest = false;
-		if (whiteboard.select)
-		{
-			if (ATDrawLogger) ATDrawLogger->info("[白板] 清空（独立链路，不退出白板）");
-			SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
-			WhiteboardResetHistory();
-		}
-		WhiteboardRefreshLayered();
-	}
-
-	static bool wbApplied = false;
-	if (whiteboard.select == wbApplied) return;
-	wbApplied = whiteboard.select;
-	if (ATDrawLogger) ATDrawLogger->info(("[白板] 应用 -> " + string(wbApplied ? "开（切换到白板画布）" : "关（切回普通/PPT 画布）")).c_str());
-
-	if (wbApplied)
-	{
-		whiteboardCanvas.Resize(drawpad.getwidth(), drawpad.getheight());
-		SetImageColor(whiteboardCanvas, RGBA(0, 0, 0, 0), true);
-		IMAGE tmp = drawpad;
-		drawpad = whiteboardCanvas;
-		whiteboardCanvas = tmp;
-		whiteboardSwapped = true;
-		SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
-		WhiteboardSaveNormalRecall();
-		whiteboardCanvasActive = true;
-	}
-	else
-	{
-		if (whiteboardSwapped)
-		{
-			IMAGE tmp = drawpad;
-			drawpad = whiteboardCanvas;
-			whiteboardCanvas = tmp;
-			whiteboardSwapped = false;
-			// 白板是临时画布：退出即销毁内容
-			SetImageColor(whiteboardCanvas, RGBA(0, 0, 0, 0), true);
-		}
-		WhiteboardRestoreNormalRecall();
-		whiteboardCanvasActive = false;
-		reserve_drawpad = true;
-		if (whiteboardDiscardAfterClose)
-		{
-			SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
-			WhiteboardResetHistory();
-			whiteboardDiscardAfterClose = false;
-		}
-	}
-
-	WhiteboardRefreshLayered();
-}
-// 白板：每帧合成时的画布底色
-static void ApplyCanvasBackground(IMAGE& background)
-{
-	if (whiteboard.select) SetImageColor(background, RGB(255, 255, 255), false);
-	else SetImageColor(background, RGBA(0, 0, 0, 1), true);
-}
-// 白板开关：切换画布内容 + 暂隐/恢复 PPT 工具栏
-void ATRDrawWhiteboardToggle()
-{
-	whiteboard.select = !whiteboard.select;
-	if (ATDrawLogger) ATDrawLogger->info(("[白板] 切换 -> " + string(whiteboard.select ? "开" : "关")).c_str());
-	if (whiteboard.select)
-	{
-		penetrate.select = false;
-		FreezeFrame.mode = 0;
-		FreezeFrame.select = false;
-	}
-
-	static PptUiWidgetStateEnum stateBeforeWhiteboard = PptUiWidgetStateEnum::Close;
-	if (PptInfoState.TotalPage != -1)
-	{
-		if (whiteboard.select)
-		{
-			stateBeforeWhiteboard = pptUiWidgetState;
-			if (pptUiWidgetState != PptUiWidgetStateEnum::Close)
-			{
-				pptUiWidgetState = PptUiWidgetStateEnum::Close;
-				PptUiAllReplaceSignal = -1;
-			}
-		}
-		else if (stateBeforeWhiteboard != PptUiWidgetStateEnum::Close && pptUiWidgetState == PptUiWidgetStateEnum::Close)
-		{
-			pptUiWidgetState = stateBeforeWhiteboard;
-			PptUiAllReplaceSignal = -1;
-		}
-	}
-
-	// 打开白板时若处于选择态，切到画笔以便直接书写
-	if (whiteboard.select && stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
-	{
-		ChangeStateModeToPen();
-	}
 }
 
 void DrawpadDrawing()
@@ -1714,20 +1463,40 @@ void DrawpadDrawing()
 	chrono::high_resolution_clock::time_point reckon;
 	for (;;)
 	{
-		WhiteboardApplyPending();
+		// 橡皮清空：直接清空当前画布，不经过选择态
+		if (canvasClearRequest)
+		{
+			canvasClearRequest = false;
+			SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
+			deque<RecallStruct>(RecallImage).swap(RecallImage);
+			RecallImagePeak = 0;
+			FirstDraw = true;
+			recall_image_recond = 0;
+			recall_image_reference = 0;
+			current_record_pointer = 0;
+			reference_record_pointer = 0;
+			extreme_point.clear();
+			if (PptInfoState.TotalPage != -1)
+			{
+				PptImg.IsSaved[PptInfoState.CurrentPage] = false;
+				PptImg.Image.erase(PptInfoState.CurrentPage);
+				PptImg.IsSave = true;
+			}
+			SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+			hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+			ulwi.hdcSrc = GetImageHDC(&window_background);
+			UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
+		}
 
 		reckon = chrono::high_resolution_clock::now();
 
 		for (;;)
 		{
-			WhiteboardApplyPending();
 			if (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
 			{
 			ChooseEnd:
 				{
-					// 画板下的选择态：白板画布保持显示（不透明），只是切到选择模式
-					if (whiteboard.select) SetImageColor(window_background, RGB(255, 255, 255), false);
-					else SetImageColor(window_background, RGBA(0, 0, 0, 0), true);
+					SetImageColor(window_background, RGBA(0, 0, 0, 0), true);
 
 					ulwi.hdcSrc = GetImageHDC(&window_background);
 					UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
@@ -1782,7 +1551,7 @@ void DrawpadDrawing()
 					}
 				}
 
-				if (!whiteboard.select && !RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
+				if (!RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
 				{
 
 					std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
@@ -1819,7 +1588,7 @@ void DrawpadDrawing()
 
 				if (offSignal) goto DrawpadDrawingEnd;
 
-				if (!whiteboard.select && RecallImage.size() >= 1 && PptInfoStateBuffer.TotalPage != -1)
+				if (RecallImage.size() >= 1 && PptInfoStateBuffer.TotalPage != -1)
 				{
 					if (!CompareImagesWithBuffer(&empty_drawpad, &drawpad))
 					{
@@ -1840,7 +1609,6 @@ void DrawpadDrawing()
 				int ppt_switch_count = 0;
 				while (stateMode.StateModeSelect == StateModeSelectEnum::ATDrawSelection)
 				{
-					WhiteboardApplyPending();
 					this_thread::sleep_for(chrono::milliseconds(50));
 
 					if (PptInfoStateBuffer.CurrentPage != PptInfoState.CurrentPage) PptInfoStateBuffer.CurrentPage = PptInfoState.CurrentPage, ppt_switch_count++;
@@ -1853,15 +1621,15 @@ void DrawpadDrawing()
 				timeBeginPeriod(1);
 
 				{
-					if (!whiteboard.select && PptInfoStateBuffer.TotalPage != -1 && ppt_switch_count != 0 && PptImg.IsSaved[PptInfoStateBuffer.CurrentPage])
+					if (PptInfoStateBuffer.TotalPage != -1 && ppt_switch_count != 0 && PptImg.IsSaved[PptInfoStateBuffer.CurrentPage])
 					{
 						drawpad = PptImg.Image[PptInfoStateBuffer.CurrentPage];
 					}
-					else if (!reserve_drawpad && !whiteboard.select) SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
+					else if (!reserve_drawpad) SetImageColor(drawpad, RGBA(0, 0, 0, 0), true);
 					reserve_drawpad = false;
 
-					ApplyCanvasBackground(window_background);
-					if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+					SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+					hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 					if (setlist.regularSetting.avoidFullScreen) SetWindowPos(drawpad_window, NULL, MainMonitor.rcMonitor.left, MainMonitor.rcMonitor.top, MainMonitor.MonitorWidth, MainMonitor.MonitorHeight, SWP_NOZORDER | SWP_NOACTIVATE);
 
@@ -1947,7 +1715,7 @@ void DrawpadDrawing()
 								}
 							}
 
-							if (!whiteboard.select && !RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
+							if (!RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
 							{
 								std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
 								std::unique_lock<std::shared_mutex> LockExtremePointSm(ExtremePointSm);
@@ -1977,7 +1745,7 @@ void DrawpadDrawing()
 								LockStrokeBackImageSm.unlock();
 							}
 
-							if (!whiteboard.select && PptImg.IsSaved[temp_currentpage] == true)
+							if (PptImg.IsSaved[temp_currentpage] == true)
 							{
 								drawpad = PptImg.Image[temp_currentpage];
 							}
@@ -1990,8 +1758,8 @@ void DrawpadDrawing()
 						PptInfoStateBuffer.TotalPage = temp_totalpage;
 
 						{
-							ApplyCanvasBackground(window_background);
-							if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+							SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+							hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 							ulwi.hdcSrc = GetImageHDC(&window_background);
 							UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
@@ -2083,7 +1851,7 @@ void DrawpadDrawing()
 						}
 					}
 
-					if (!whiteboard.select && !RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
+					if (!RecallImage.empty() && !CompareImagesWithBuffer(&empty_drawpad, &RecallImage.back().img))
 					{
 						std::unique_lock<std::shared_mutex> LockStrokeBackImageSm(StrokeBackImageSm);
 						std::unique_lock<std::shared_mutex> LockExtremePointSm(ExtremePointSm);
@@ -2113,7 +1881,7 @@ void DrawpadDrawing()
 						LockStrokeBackImageSm.unlock();
 					}
 
-					if (!whiteboard.select && PptImg.IsSaved[temp_currentpage] == true)
+					if (PptImg.IsSaved[temp_currentpage] == true)
 					{
 						drawpad = PptImg.Image[temp_currentpage];
 					}
@@ -2130,8 +1898,8 @@ void DrawpadDrawing()
 				PptInfoStateBuffer.TotalPage = temp_totalpage;
 
 				{
-					ApplyCanvasBackground(window_background);
-					if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+					SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
+					hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 
 					ulwi.hdcSrc = GetImageHDC(&window_background);
 					UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
@@ -2141,10 +1909,9 @@ void DrawpadDrawing()
 			this_thread::sleep_for(chrono::milliseconds(10));
 		}
 
-		WhiteboardApplyPending();
-		ApplyCanvasBackground(window_background);
+		SetImageColor(window_background, RGBA(0, 0, 0, 1), true);
 		std::shared_lock<std::shared_mutex> lock1(StrokeBackImageSm);
-		if (whiteboard.select == whiteboardCanvasActive) hiex::TransparentImage(&window_background, 0, 0, &drawpad);
+		hiex::TransparentImage(&window_background, 0, 0, &drawpad);
 		lock1.unlock();
 
 		std::shared_lock<std::shared_mutex> lock2(StrokeImageListSm);
@@ -2279,8 +2046,6 @@ void DrawpadDrawing()
 			siz = StrokeImageList.size();
 			lock3.unlock();
 		}
-
-		WhiteboardApplyPending();
 
 		ulwi.hdcSrc = GetImageHDC(&window_background);
 		UpdateLayeredWindowIndirect(drawpad_window, &ulwi);
