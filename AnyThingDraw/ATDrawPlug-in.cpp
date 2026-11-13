@@ -2400,13 +2400,75 @@ void LogForegroundWindowDetail(const wstring& tag)
 	}
 	ATDrawLogger->info(("[PPT][焦点] " + utf16ToUtf8(tag) + " hwnd=0x" + to_string(reinterpret_cast<uintptr_t>(fg)) + " class=" + utf16ToUtf8(cls) + " title=" + utf16ToUtf8(title) + " pid=" + to_string(pid) + " proc=" + utf16ToUtf8(procName)).c_str());
 }
+// 判断前台窗口是否属于"临时/小工具/透明"窗口：这类窗口抢焦点不应结束放映
+static bool IsTransientForegroundWindow(HWND hwnd)
+{
+	if (hwnd == NULL || !IsWindow(hwnd)) return false;
+
+	// 本程序自己的窗口
+	DWORD pid = 0;
+	GetWindowThreadProcessId(hwnd, &pid);
+	if (pid == GetCurrentProcessId()) return true;
+
+	wchar_t className[128] = { 0 };
+	GetClassNameW(hwnd, className, 128);
+	// 系统对话框、提示、下拉列表等临时窗口类
+	if (wcscmp(className, L"#32770") == 0 || wcscmp(className, L"tooltips_class32") == 0 ||
+		wcscmp(className, L"ComboLBox") == 0 || wcscmp(className, L"IME") == 0)
+	{
+		return true;
+	}
+
+	LONG_PTR exStyle = GetWindowLongPtrW(hwnd, GWL_EXSTYLE);
+	// 分层/透明/工具/无激活窗口：悬浮工具条、侧边栏、水印、提示窗等
+	if ((exStyle & (WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT)) != 0) return true;
+
+	// 按面积判断：小弹窗/小侧边栏不视为切出
+	RECT windowRect = { 0 };
+	if (GetWindowRect(hwnd, &windowRect))
+	{
+		long long windowWidth = windowRect.right - windowRect.left;
+		long long windowHeight = windowRect.bottom - windowRect.top;
+		long long windowArea = windowWidth * windowHeight;
+
+		HMONITOR monitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+		MONITORINFO monitorInfo = { 0 };
+		monitorInfo.cbSize = sizeof(monitorInfo);
+		if (monitor && GetMonitorInfoW(monitor, &monitorInfo))
+		{
+			long long monitorWidth = monitorInfo.rcMonitor.right - monitorInfo.rcMonitor.left;
+			long long monitorHeight = monitorInfo.rcMonitor.bottom - monitorInfo.rcMonitor.top;
+			long long monitorArea = monitorWidth * monitorHeight;
+			if (monitorArea > 0)
+			{
+				// 面积小于屏幕 12%：视为弹窗/侧边栏
+				if (windowArea * 100 < monitorArea * 12) return true;
+			}
+		}
+
+		// 无标题栏的弹出型小窗口（<=50% 屏幕，排除全屏无边框应用）
+		LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+		if ((style & WS_CAPTION) == 0 && (style & WS_POPUP) != 0 && windowWidth > 0 && windowHeight > 0)
+		{
+			HMONITOR monitor2 = MonitorFromWindow(hwnd, MONITOR_DEFAULTTONEAREST);
+			MONITORINFO monitorInfo2 = { 0 };
+			monitorInfo2.cbSize = sizeof(monitorInfo2);
+			if (monitor2 && GetMonitorInfoW(monitor2, &monitorInfo2))
+			{
+				long long monitorArea2 = (long long)(monitorInfo2.rcMonitor.right - monitorInfo2.rcMonitor.left) * (monitorInfo2.rcMonitor.bottom - monitorInfo2.rcMonitor.top);
+				if (monitorArea2 > 0 && windowArea * 100 < monitorArea2 * 50) return true;
+			}
+		}
+	}
+
+	return false;
+}
+
 void PptInfo()
 {
 	AnyThingDraw::Thread::StatusGuard guard("PptInfo");
 
 	bool Initialization = false; // 控件初始化完毕
-	bool toolbarAutoHidden = false; // 切出放映后自动隐藏工具栏（不结束放映）
-	chrono::steady_clock::time_point focusLostSince; // 持续切出的起始时刻（瞬时弹窗不隐藏）
 	int foregroundSeen = 0;      // 已观测到放映窗口在前台的次数（armed 判定）
 	int focusLostCount = 0;      // 连续判定切出的次数（防抖）
 	chrono::steady_clock::time_point initTime; // 初始化时刻（启动冷却）
@@ -2430,7 +2492,6 @@ void PptInfo()
 			else ppt_software = L"PowerPoint";
 
 			foregroundSeen = 0, focusLostCount = 0;
-			toolbarAutoHidden = false;
 			initTime = chrono::steady_clock::now();
 
 			Initialization = true;
@@ -2449,7 +2510,6 @@ void PptInfo()
 			// 设置控件归位
 			PptComReadSettingPositionOnly();
 
-			toolbarAutoHidden = false;
 			Initialization = false;
 		}
 		else if (Initialization)
@@ -2472,39 +2532,30 @@ void PptInfo()
 			{
 				foregroundSeen++;
 				focusLostCount = 0;
-				focusLostSince = chrono::steady_clock::time_point();
-
-				// 放映重新回到前台：恢复工具栏（不用结束放映）
-				if (toolbarAutoHidden)
-				{
-					toolbarAutoHidden = false;
-					pptUiWidgetState = PptUiWidgetStateEnum::Expand;
-					PptUiAllReplaceSignal = -1;
-					ATDrawLogger->info("[PPT] 放映回到前台，恢复工具栏");
-				}
 			}
 			else if (focusState == PptFocusState::Lost)
 			{
-				bool armed = foregroundSeen > 0 && chrono::duration<double>(chrono::steady_clock::now() - initTime).count() > 2.0;
-				if (armed)
+				// 优雅区分：小弹窗/透明/工具窗口(希沃侧边栏、更新提示、水印等)抢焦点不算切出，
+				// 只有前台切到"正常应用窗口"（浏览器、资源管理器等）才会累计并结束放映
+				if (IsTransientForegroundWindow(GetForegroundWindow()))
 				{
-					focusLostCount++;
-					if (focusLostCount >= 4)
+					focusLostCount = 0;
+				}
+				else
+				{
+					bool armed = foregroundSeen > 0 && chrono::duration<double>(chrono::steady_clock::now() - initTime).count() > 2.0;
+					if (armed)
 					{
-						auto now = chrono::steady_clock::now();
-						if (focusLostSince == chrono::steady_clock::time_point()) focusLostSince = now;
-
-						// 持续切出超过 3 秒才隐藏工具栏；短暂的弹窗/侧边栏抢焦点不隐藏、不结束放映
-						double lostSeconds = chrono::duration<double>(now - focusLostSince).count();
-						if (lostSeconds >= 3.0 && !toolbarAutoHidden && !CheckEndShow.isChecking)
+						focusLostCount++;
+						if (focusLostCount >= 4)
 						{
-							LogForegroundWindowDetail(L"切出放映超过 3 秒");
-							toolbarAutoHidden = true;
-							pptUiWidgetState = PptUiWidgetStateEnum::Close;
-							PptUiAllReplaceSignal = -1;
-							ATDrawLogger->info("[PPT] 切出放映超过 3 秒，隐藏工具栏（放映继续）");
+							LogForegroundWindowDetail(L"自动结束放映触发");
+							ATDrawLogger->info("[PPT] 连续检测到放映窗口不在前台（非临时窗口），结束放映");
+
+							bool recentPrompt = chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now() - LastEndShowPromptTime).count() < 1500;
+							if (pptComSetlist.exitShowOnFocusLost && !CheckEndShow.isChecking && !recentPrompt) EndPptShow();	// 弹框期间不自动结束放映
+							focusLostCount = 0;
 						}
-						focusLostCount = 0;
 					}
 				}
 			}
