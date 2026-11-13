@@ -382,6 +382,65 @@ static bool IsPendingUpdateReady(const wstring& version)
 	return _waccess(installerPath.c_str(), 4) == 0;
 }
 
+// ===== 更新失败冷却：同版本安装失败多次后暂停自动更新，避免无限重下/重装 =====
+static wstring GetUpdateStatePath()
+{
+	return userDataPath + L"installer\\update_state.json";
+}
+
+static bool LoadUpdateState(wstring& version, int& attempts, long long& lastAttempt)
+{
+	version.clear(); attempts = 0; lastAttempt = 0;
+	ifstream file(GetUpdateStatePath(), ios::binary);
+	if (!file) return false;
+	string content((istreambuf_iterator<char>(file)), istreambuf_iterator<char>());
+	if (content.size() >= 3 && static_cast<unsigned char>(content[0]) == 0xEF) content = content.substr(3);
+	Json::Reader reader; Json::Value root;
+	if (!reader.parse(content, root)) return false;
+	if (root.isMember("version") && root["version"].isString()) version = utf8ToUtf16(root["version"].asString());
+	if (root.isMember("attempts") && root["attempts"].isInt()) attempts = root["attempts"].asInt();
+	if (root.isMember("last_attempt") && root["last_attempt"].isInt64()) lastAttempt = root["last_attempt"].asInt64();
+	return true;
+}
+
+static void SaveUpdateState(const wstring& version, int attempts, long long lastAttempt)
+{
+	error_code ec;
+	filesystem::create_directories(userDataPath + L"installer", ec);
+	Json::Value root;
+	root["version"] = Json::Value(utf16ToUtf8(version));
+	root["attempts"] = Json::Value(attempts);
+	root["last_attempt"] = Json::Value(static_cast<Json::Int64>(lastAttempt));
+	Json::StreamWriterBuilder builder;
+	builder.settings_["emitUTF8"] = true;
+	unique_ptr<Json::StreamWriter> writer(builder.newStreamWriter());
+	ofstream out(GetUpdateStatePath(), ios::binary);
+	out << "\xEF\xBB\xBF";
+	writer->write(root, &out);
+}
+
+static long long GetNowSeconds()
+{
+	return chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
+}
+
+static bool IsUpdateCoolingDown(const wstring& version)
+{
+	wstring savedVersion; int attempts = 0; long long lastAttempt = 0;
+	if (!LoadUpdateState(savedVersion, attempts, lastAttempt)) return false;
+	if (savedVersion != version) return false;
+	if (attempts < 2) return false;
+	return (GetNowSeconds() - lastAttempt) < 6 * 60 * 60;
+}
+
+static void RecordUpdateAttempt(const wstring& version)
+{
+	wstring savedVersion; int attempts = 0; long long lastAttempt = 0;
+	LoadUpdateState(savedVersion, attempts, lastAttempt);
+	if (savedVersion != version) attempts = 0;
+	SaveUpdateState(version, attempts + 1, GetNowSeconds());
+}
+
 // 启动时应用已下载的更新：静默运行安装程序（由安装程序结束本程序并启动新版本）。
 // 关键：安装前必须先移除"待更新"标记——安装程序会 taskkill 本进程，
 // 若等安装完再删标记，进程已被结束，标记残留会导致每次启动都再次安装（无限更新循环）。
@@ -442,6 +501,41 @@ void ApplyPendingUpdate()
 
 	wstring installDir = globalPath;
 	while (!installDir.empty() && installDir.back() == L'\\') installDir.pop_back();
+	// 同版本多次安装失败：进入冷却，清理标记并跳过（防止跨启动的无限更新）
+	if (!pendingVersion.empty() && IsUpdateCoolingDown(pendingVersion))
+	{
+		ATDrawLogger->warn("[主线程][ATDrawUpdate] 同版本更新多次失败，进入冷却，跳过本次自动安装");
+		filesystem::remove(installerPath, ec);
+		filesystem::remove(pendingPath, ec);
+		filesystem::remove(applyingPath, ec);
+		filesystem::remove(updateJsonPath, ec);
+		return;
+	}
+
+	// 便携副本/改名副本：运行目录必须与注册表安装目录一致，否则不做静默安装
+	{
+		wchar_t regDirBuffer[MAX_PATH] = { 0 };
+		DWORD regSize = sizeof(regDirBuffer);
+		HKEY regKey = NULL;
+		if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, L"Software\\AnyThingDraw", 0, KEY_READ, &regKey) == ERROR_SUCCESS)
+		{
+			RegQueryValueExW(regKey, L"InstallDir", NULL, NULL, reinterpret_cast<LPBYTE>(regDirBuffer), &regSize);
+			RegCloseKey(regKey);
+		}
+		wstring regDir = regDirBuffer;
+		wstring runDir = globalPath;
+		while (!regDir.empty() && (regDir.back() == L'\\' || regDir.back() == L'\/')) regDir.pop_back();
+		while (!runDir.empty() && (runDir.back() == L'\\' || runDir.back() == L'\/')) runDir.pop_back();
+		if (!regDir.empty() && _wcsicmp(regDir.c_str(), runDir.c_str()) != 0)
+		{
+			ATDrawLogger->warn("[主线程][ATDrawUpdate] 运行目录与安装目录不一致（便携/副本），跳过静默更新");
+			filesystem::remove(installerPath, ec);
+			filesystem::remove(pendingPath, ec);
+			filesystem::remove(updateJsonPath, ec);
+			return;
+		}
+	}
+
 	wstring parameters = L"/S /D=" + installDir;
 
 	ATDrawLogger->info("[主线程][ATDrawUpdate] 发现已下载的新版本，启动安装程序");
@@ -456,6 +550,8 @@ void ApplyPendingUpdate()
 		}
 		filesystem::remove(updateJsonPath, ec);
 	}
+
+	if (!pendingVersion.empty()) RecordUpdateAttempt(pendingVersion);
 
 	SHELLEXECUTEINFOW sei = { 0 };
 	sei.cbSize = sizeof(sei);
