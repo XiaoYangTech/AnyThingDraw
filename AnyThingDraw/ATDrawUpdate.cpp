@@ -383,26 +383,52 @@ static bool IsPendingUpdateReady(const wstring& version)
 }
 
 // 启动时应用已下载的更新：静默运行安装程序（由安装程序结束本程序并启动新版本）。
-// 同意 UAC 时本进程会被安装程序结束；拒绝 UAC 或安装失败则清除标记并继续正常启动。
+// 关键：安装前必须先移除"待更新"标记——安装程序会 taskkill 本进程，
+// 若等安装完再删标记，进程已被结束，标记残留会导致每次启动都再次安装（无限更新循环）。
 void ApplyPendingUpdate()
 {
 	wstring pendingPath = userDataPath + L"installer\\pending_update.json";
+	wstring applyingPath = userDataPath + L"installer\\pending_update.applying";
+	wstring updateJsonPath = userDataPath + L"installer\\update.json";
+	error_code ec;
+
+	// 上次安装中断留下的临时标记：直接清理
+	filesystem::remove(applyingPath, ec);
+
 	if (_waccess(pendingPath.c_str(), 4) != 0) return;
 
 	string content;
 	{
 		ifstream readjson(pendingPath, ios::binary);
-		if (!readjson) return;
+		if (!readjson)
+		{
+			filesystem::remove(pendingPath, ec);
+			return;
+		}
 		content.assign((istreambuf_iterator<char>(readjson)), istreambuf_iterator<char>());
 	}
 	if (content.compare(0, 3, "\xEF\xBB\xBF") == 0) content = content.substr(3);
 
 	Json::Reader reader;
 	Json::Value root;
-	error_code ec;
 	if (!reader.parse(content, root) || !root.isMember("installer") || !root["installer"].isString())
 	{
 		filesystem::remove(pendingPath, ec);
+		return;
+	}
+
+	// 版本校验：待安装版本必须比当前版本新，否则清除标记，避免反复安装同一版本
+	wstring pendingVersion;
+	if (root.isMember("version") && root["version"].isString()) pendingVersion = utf8ToUtf16(root["version"].asString());
+	if (!pendingVersion.empty() && !IsNewerVersion(pendingVersion, editionDate))
+	{
+		ATDrawLogger->warn("[主线程][ATDrawUpdate] 待更新版本不高于当前版本，清除待更新标记");
+		if (root.isMember("installer") && root["installer"].isString())
+		{
+			filesystem::remove(userDataPath + utf8ToUtf16(root["installer"].asString()), ec);
+		}
+		filesystem::remove(pendingPath, ec);
+		filesystem::remove(updateJsonPath, ec);
 		return;
 	}
 
@@ -410,6 +436,7 @@ void ApplyPendingUpdate()
 	if (_waccess(installerPath.c_str(), 4) != 0)
 	{
 		filesystem::remove(pendingPath, ec);
+		filesystem::remove(updateJsonPath, ec);
 		return;
 	}
 
@@ -420,6 +447,16 @@ void ApplyPendingUpdate()
 	ATDrawLogger->info("[主线程][ATDrawUpdate] 发现已下载的新版本，启动安装程序");
 	ATDrawLogger->flush();
 
+	// 启动安装程序前先移走待更新标记（安装程序会结束本进程，之后无法再清理）
+	{
+		filesystem::rename(pendingPath, applyingPath, ec);
+		if (ec)
+		{
+			filesystem::remove(pendingPath, ec);
+		}
+		filesystem::remove(updateJsonPath, ec);
+	}
+
 	SHELLEXECUTEINFOW sei = { 0 };
 	sei.cbSize = sizeof(sei);
 	sei.fMask = SEE_MASK_NOCLOSEPROCESS;
@@ -427,13 +464,29 @@ void ApplyPendingUpdate()
 	sei.lpFile = installerPath.c_str();
 	sei.lpParameters = parameters.c_str();
 	sei.nShow = SW_SHOWNORMAL;
-	if (!ShellExecuteExW(&sei)) return;
+	if (!ShellExecuteExW(&sei))
+	{
+		// UAC 被拒绝或安装程序无法启动：清理安装包，本次不更新（避免反复触发）
+		ATDrawLogger->warn("[主线程][ATDrawUpdate] 安装程序启动失败或被取消，清理更新包");
+		filesystem::remove(installerPath, ec);
+		filesystem::remove(applyingPath, ec);
+		return;
+	}
 
 	WaitForSingleObject(sei.hProcess, 300000);
-	if (sei.hProcess) CloseHandle(sei.hProcess);
+	DWORD exitCode = 1;
+	if (sei.hProcess)
+	{
+		GetExitCodeProcess(sei.hProcess, &exitCode);
+		CloseHandle(sei.hProcess);
+	}
 
+	// 若本进程还活着，说明安装未完成（可能被拒绝/失败）：清理安装包与标记，避免下次重试同一包
+	ATDrawLogger->warn("[主线程][ATDrawUpdate] 安装程序返回，退出码 " + to_string(exitCode));
 	filesystem::remove(installerPath, ec);
+	filesystem::remove(applyingPath, ec);
 	filesystem::remove(pendingPath, ec);
+	filesystem::remove(updateJsonPath, ec);
 }
 
 bool isWindows8OrGreater;

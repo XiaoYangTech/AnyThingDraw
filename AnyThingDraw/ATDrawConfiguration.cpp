@@ -405,7 +405,8 @@ bool ReadSetting()
 }
 bool WriteSetting()
 {
-	if (setlist.configurationSetting.enable) setlistVal.clear();
+	// 始终重建输出补丁：避免把启动时读入的旧快照整块合并回去，覆盖其它写函数（如 PPT 配置）的改动
+	setlistVal.clear();
 	bool enableAutoUpdate;
 	string updateArchitecture;
 	{

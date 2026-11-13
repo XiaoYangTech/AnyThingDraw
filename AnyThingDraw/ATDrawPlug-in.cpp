@@ -4350,9 +4350,9 @@ void PPTLinkageMain()
 {
 	AnyThingDraw::Thread::StatusGuard guard("PPTLinkageMain");
 
-	// 读取 ppt 配置
+	// 读取 ppt 配置（统一 settings.json；旧版 opt 文件仅为兼容迁移）
 	{
-		if (_waccess((userDataPath + L"opt\\pptcom_configuration.json").c_str(), 4) == 0) PptComReadSetting();
+		PptComReadSetting();
 		PptComWriteSetting();
 	}
 	// 检查相关注册表项目
