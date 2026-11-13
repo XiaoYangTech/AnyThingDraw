@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "ATDrawMain.h"
 
 bool OccupyFileForRead(HANDLE* hFile, const wstring& filePath);
@@ -204,8 +204,8 @@ struct DdbInteractionSetListStruct
 		enable = false;
 		runAsAdmin = false;
 
-		DdbEdition = L"20261004a";
-		DdbSHA256 = "791dc35c059dfe8099cea791fe245649f96bf9b62b1a05ba1dcc101df425ec33";
+		DdbEdition = L"20261019a";
+		DdbSHA256 = "49e5853b2da71028c4e2d26857c27c4c35b60e337ee4a2a9caf9625ff4776131";
 
 		// -----
 

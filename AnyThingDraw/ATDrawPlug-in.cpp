@@ -2406,6 +2406,7 @@ void PptInfo()
 
 	bool Initialization = false; // 控件初始化完毕
 	bool toolbarAutoHidden = false; // 切出放映后自动隐藏工具栏（不结束放映）
+	chrono::steady_clock::time_point focusLostSince; // 持续切出的起始时刻（瞬时弹窗不隐藏）
 	int foregroundSeen = 0;      // 已观测到放映窗口在前台的次数（armed 判定）
 	int focusLostCount = 0;      // 连续判定切出的次数（防抖）
 	chrono::steady_clock::time_point initTime; // 初始化时刻（启动冷却）
@@ -2471,6 +2472,7 @@ void PptInfo()
 			{
 				foregroundSeen++;
 				focusLostCount = 0;
+				focusLostSince = chrono::steady_clock::time_point();
 
 				// 放映重新回到前台：恢复工具栏（不用结束放映）
 				if (toolbarAutoHidden)
@@ -2489,20 +2491,19 @@ void PptInfo()
 					focusLostCount++;
 					if (focusLostCount >= 4)
 					{
-						LogForegroundWindowDetail(L"切出放映");
-						bool recentPrompt = chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now() - LastEndShowPromptTime).count() < 1500;
+						auto now = chrono::steady_clock::now();
+						if (focusLostSince == chrono::steady_clock::time_point()) focusLostSince = now;
 
-						// 默认行为：切出放映只隐藏工具栏，不结束放映；点希沃侧边栏/小弹窗抢焦点不再误退放映
-						if (!CheckEndShow.isChecking && !toolbarAutoHidden)
+						// 持续切出超过 3 秒才隐藏工具栏；短暂的弹窗/侧边栏抢焦点不隐藏、不结束放映
+						double lostSeconds = chrono::duration<double>(now - focusLostSince).count();
+						if (lostSeconds >= 3.0 && !toolbarAutoHidden && !CheckEndShow.isChecking)
 						{
+							LogForegroundWindowDetail(L"切出放映超过 3 秒");
 							toolbarAutoHidden = true;
 							pptUiWidgetState = PptUiWidgetStateEnum::Close;
 							PptUiAllReplaceSignal = -1;
-							ATDrawLogger->info("[PPT] 放映不在前台，自动隐藏工具栏（不结束放映）");
+							ATDrawLogger->info("[PPT] 切出放映超过 3 秒，隐藏工具栏（放映继续）");
 						}
-
-						// 仅当用户显式开启"切出界面自动结束放映"时才结束放映
-						if (pptComSetlist.exitShowOnFocusLost && !CheckEndShow.isChecking && !recentPrompt) EndPptShow();
 						focusLostCount = 0;
 					}
 				}
