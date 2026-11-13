@@ -2405,6 +2405,7 @@ void PptInfo()
 	AnyThingDraw::Thread::StatusGuard guard("PptInfo");
 
 	bool Initialization = false; // 控件初始化完毕
+	bool toolbarAutoHidden = false; // 切出放映后自动隐藏工具栏（不结束放映）
 	int foregroundSeen = 0;      // 已观测到放映窗口在前台的次数（armed 判定）
 	int focusLostCount = 0;      // 连续判定切出的次数（防抖）
 	chrono::steady_clock::time_point initTime; // 初始化时刻（启动冷却）
@@ -2428,6 +2429,7 @@ void PptInfo()
 			else ppt_software = L"PowerPoint";
 
 			foregroundSeen = 0, focusLostCount = 0;
+			toolbarAutoHidden = false;
 			initTime = chrono::steady_clock::now();
 
 			Initialization = true;
@@ -2446,6 +2448,7 @@ void PptInfo()
 			// 设置控件归位
 			PptComReadSettingPositionOnly();
 
+			toolbarAutoHidden = false;
 			Initialization = false;
 		}
 		else if (Initialization)
@@ -2468,6 +2471,15 @@ void PptInfo()
 			{
 				foregroundSeen++;
 				focusLostCount = 0;
+
+				// 放映重新回到前台：恢复工具栏（不用结束放映）
+				if (toolbarAutoHidden)
+				{
+					toolbarAutoHidden = false;
+					pptUiWidgetState = PptUiWidgetStateEnum::Expand;
+					PptUiAllReplaceSignal = -1;
+					ATDrawLogger->info("[PPT] 放映回到前台，恢复工具栏");
+				}
 			}
 			else if (focusState == PptFocusState::Lost)
 			{
@@ -2477,10 +2489,20 @@ void PptInfo()
 					focusLostCount++;
 					if (focusLostCount >= 4)
 					{
-						LogForegroundWindowDetail(L"自动结束放映触发");
-					ATDrawLogger->info("[PPT] 连续检测到放映窗口不在前台，结束放映（切出检测防抖已确认）");
+						LogForegroundWindowDetail(L"切出放映");
 						bool recentPrompt = chrono::duration_cast<chrono::milliseconds>(chrono::steady_clock::now() - LastEndShowPromptTime).count() < 1500;
-						if (pptComSetlist.exitShowOnFocusLost && !CheckEndShow.isChecking && !recentPrompt) EndPptShow();	// 弹框期间不自动结束放映
+
+						// 默认行为：切出放映只隐藏工具栏，不结束放映；点希沃侧边栏/小弹窗抢焦点不再误退放映
+						if (!CheckEndShow.isChecking && !toolbarAutoHidden)
+						{
+							toolbarAutoHidden = true;
+							pptUiWidgetState = PptUiWidgetStateEnum::Close;
+							PptUiAllReplaceSignal = -1;
+							ATDrawLogger->info("[PPT] 放映不在前台，自动隐藏工具栏（不结束放映）");
+						}
+
+						// 仅当用户显式开启"切出界面自动结束放映"时才结束放映
+						if (pptComSetlist.exitShowOnFocusLost && !CheckEndShow.isChecking && !recentPrompt) EndPptShow();
 						focusLostCount = 0;
 					}
 				}
@@ -4353,6 +4375,31 @@ void PPTLinkageMain()
 	// 读取 ppt 配置（统一 settings.json；旧版 opt 文件仅为兼容迁移）
 	{
 		PptComReadSetting();
+
+		// 用户从未自定义过缩放（三项都是默认 1.0）时，按屏幕 DPI 自动适配放映工具栏大小
+		if (fabs(pptComSetlist.bottomSideBothWidgetScale - 1.0f) < 0.001f &&
+			fabs(pptComSetlist.bottomSideMiddleWidgetScale - 1.0f) < 0.001f &&
+			fabs(pptComSetlist.middleSideBothWidgetScale - 1.0f) < 0.001f)
+		{
+			int dpi = USER_DEFAULT_SCREEN_DPI;
+			HDC screenDC = GetDC(nullptr);
+			if (screenDC)
+			{
+				dpi = GetDeviceCaps(screenDC, LOGPIXELSX);
+				ReleaseDC(nullptr, screenDC);
+			}
+			float autoScale = static_cast<float>(dpi) / USER_DEFAULT_SCREEN_DPI * 0.8f;
+			autoScale = clamp(autoScale, 1.0f, 2.5f);
+			autoScale = roundf(autoScale * 100) / 100;
+			if (autoScale > 1.0f)
+			{
+				pptComSetlist.bottomSideBothWidgetScale = autoScale;
+				pptComSetlist.bottomSideMiddleWidgetScale = autoScale;
+				pptComSetlist.middleSideBothWidgetScale = autoScale;
+				ATDrawLogger->info("[PPT] 按屏幕 DPI 自动适配工具栏缩放：" + to_string(autoScale));
+			}
+		}
+
 		PptComWriteSetting();
 	}
 	// 检查相关注册表项目
