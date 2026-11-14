@@ -74,7 +74,8 @@ void ResetPptComSnapshot()
 // -------------------------
 // UI 对象
 
-bool PptUiAnimationEnable;
+bool PptUiAnimationEnable;			// 工具栏进入/退出动画（保持关闭）
+bool PptUiColorAnimationEnable = true;	// 按钮颜色反馈动画（按下变暗、松开渐变变亮）
 
 PptUiLineWidgetClass pptUiLineWidget[5], pptUiLineWidgetTarget[5];
 PptUiRoundRectWidgetClass pptUiRoundRectWidget[15], pptUiRoundRectWidgetTarget[15];
@@ -1101,8 +1102,8 @@ void PptUI()
 	PPTMainMonitor = MainMonitor;
 	DisplaysInfoLock.unlock();
 
-	// 启用 UI 动画（恢复原有出场动画）
-	PptUiAnimationEnable = true;
+	// 关闭工具栏进入/退出动画（直接出现/消失）
+	PptUiAnimationEnable = false;
 
 	// UI 初始化
 	{
@@ -2023,7 +2024,7 @@ void PptUI()
 						tPptUiChangeSignal = true;
 					}
 
-					if (pptUiLineWidget[i].Color.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
+					if (pptUiLineWidget[i].Color.replace || PptUiAllReplaceSignal || !PptUiColorAnimationEnable)
 					{
 						pptUiLineWidget[i].Color.replace = false;
 						pptUiLineWidget[i].Color.v = pptUiLineWidgetTarget[i].Color.v;
@@ -2124,7 +2125,7 @@ void PptUI()
 						tPptUiChangeSignal = true;
 					}
 
-					if (pptUiRoundRectWidget[i].FrameColor.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
+					if (pptUiRoundRectWidget[i].FrameColor.replace || PptUiAllReplaceSignal || !PptUiColorAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].FrameColor.replace = false;
 						pptUiRoundRectWidget[i].FrameColor.v = pptUiRoundRectWidgetTarget[i].FrameColor.v;
@@ -2136,7 +2137,7 @@ void PptUI()
 						tPptUiChangeSignal = true;
 					}
 
-					if (pptUiRoundRectWidget[i].FillColor.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
+					if (pptUiRoundRectWidget[i].FillColor.replace || PptUiAllReplaceSignal || !PptUiColorAnimationEnable)
 					{
 						pptUiRoundRectWidget[i].FillColor.replace = false;
 						pptUiRoundRectWidget[i].FillColor.v = pptUiRoundRectWidgetTarget[i].FillColor.v;
@@ -2199,7 +2200,7 @@ void PptUI()
 						tPptUiChangeSignal = true;
 					}
 
-					if (pptUiImageWidget[i].Transparency.replace || PptUiAllReplaceSignal || !PptUiAnimationEnable)
+					if (pptUiImageWidget[i].Transparency.replace || PptUiAllReplaceSignal || !PptUiColorAnimationEnable)
 					{
 						pptUiImageWidget[i].Transparency.replace = false;
 						pptUiImageWidget[i].Transparency.v = pptUiImageWidgetTarget[i].Transparency.v;
